@@ -46,6 +46,17 @@ import pytz
 import numpy as np
 import pandas as pd
 
+# pythonnet 3.x hospeda .NET Core por defecto (clr_loader elige coreclr si no
+# se le pide otra cosa). El AF SDK de OSIsoft es .NET Framework clásico: bajo
+# coreclr, `clr.AddReference('OSIsoft.AFSDK')` falla con
+# System.IO.FileNotFoundException aunque el DLL exista en el path correcto
+# (confirmado 2026-09-06: mismo `sys.path.append` + `AddReference` que
+# funcionaban en el notebook original, con pythonnet 2.x — ahí sí hablaba con
+# .NET Framework por default). Hay que pedir el runtime "netfx" ANTES del
+# primer `import clr` del proceso; después de eso queda fijo.
+import pythonnet
+pythonnet.load('netfx')
+
 import clr
 import System
 
