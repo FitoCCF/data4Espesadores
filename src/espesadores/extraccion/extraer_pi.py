@@ -67,8 +67,19 @@ from espesadores.config import EXTRACCION, TAGS_EXTRACCION_PI, TAGS_DIGITALES
 # --------------------------------------------------------------------------- #
 # Ruta específica de esta máquina — sale de conf/local/extraccion.local.yaml,
 # no del código (antes hardcodeada aquí).
+#
+# AddReference('OSIsoft.AFSDK') por NOMBRE depende de que pythonnet resuelva
+# el ensamblado buscando en sys.path; confirmado en la máquina Windows real
+# (2026-09-06) que con netfx ya activo eso sigue tirando FileNotFoundException
+# aunque el DLL exista en la ruta correcta. AddReference con la RUTA COMPLETA
+# del .dll usa Assembly.LoadFrom por debajo y no depende de esa búsqueda.
+_af_sdk_dll = os.path.join(EXTRACCION["af_sdk_path"], 'OSIsoft.AFSDK.dll')
+if not os.path.isfile(_af_sdk_dll):
+    raise FileNotFoundError(
+        'No se encontró OSIsoft.AFSDK.dll en {}. Revisar af_sdk_path en '
+        'conf/local/extraccion.local.yaml.'.format(_af_sdk_dll))
 sys.path.append(EXTRACCION["af_sdk_path"])
-clr.AddReference('OSIsoft.AFSDK')
+clr.AddReference(_af_sdk_dll)
 
 from OSIsoft.AF.PI import PIServers, PIPoint, PIPointList, PICommonPointAttributes
 from OSIsoft.AF.Time import AFTime, AFTimeSpan, AFTimeRange
