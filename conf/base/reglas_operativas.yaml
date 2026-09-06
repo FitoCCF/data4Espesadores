@@ -1,0 +1,63 @@
+# ==============================================================================
+# REGLAS OPERATIVAS Y PARÁMETROS DE PROCESO — ESPESADORES C2
+# ==============================================================================
+# Fuente única de horarios de turno y umbrales de proceso. Antes duplicados
+# (con un valor inconsistente) entre config_espesadores.py, rol_guardias.py y
+# nivel_piscinas.py — unificado en la migración de 2026-09-06.
+
+# Turnos, confirmados con planta (H-D del traspaso y confirmación directa del
+# usuario el 2026-09-06). C2 = Concentradora 2, engloba el área 4100: el rol
+# aplica directamente a los operadores de los espesadores de relaves.
+turnos:
+  inicio_turno_a: "07:30"
+  inicio_turno_b: "19:30"
+  duracion_h: 12
+  codigo_dia: "A"
+  codigo_noche: "B"
+  codigo_descanso: "D"
+  ciclo_dias: 14   # AAAADDDBBBBDDD; ojo con lags de autocorrelación: 336 h, no 168 h
+
+# Parámetros físicos del proceso (no son tags).
+proceso:
+  # %sólidos de alimentación por defecto cuando sol_overflow no está disponible
+  # (rama else -> 36 del estimador del DCS).
+  sol_alim_default: 36.0
+  # Factor de conversión del flujo de agua de dilución: m3/h = valor * 3.6.
+  factor_dilucion: 3.6
+  # Gravedad específica de sólidos asumida por el DCS (TH-001: %sólidos y
+  # densidad NO son mediciones independientes, comparten este valor fijo).
+  sg_solidos_nominal: 2.77
+  # Umbral de velocidad para considerar que una bomba está EN SERVICIO.
+  umbral_bomba_on: 5.0
+  # Tonelaje mínimo del molino para considerar que la planta está produciendo.
+  tonelaje_min_produccion: 100.0
+
+# Reglas de nivel de piscina (dominio/piscinas.py). Regla de derivación
+# confirmada directamente por el usuario el 2026-09-06.
+piscinas:
+  nivel_minimo_pct: 75        # R1: el nivel nunca debe bajar de este %
+  nivel_cierre_guardia_pct: 90  # R2: al cierre de cada guardia debe quedar en este % o más
+  # Regla de derivación: si ambos transmisores son parecidos, el valor es
+  # válido tal cual; si difieren más que este umbral, se toma el MAYOR (la
+  # falla típica de instrumento sesga hacia abajo). 2.0 pp es el valor que
+  # ya traía `nivel_piscinas.py` (`DIVERGENCIA_ALERTA`) — pendiente ajustar
+  # al valle real del histograma de divergencia cuando se corra contra el
+  # dataset canónico (§5.1 del traspaso).
+  umbral_diferencia_grande_pp: 2.0
+  # Horas de cambio de guardia para evaluar R2. `nivel_piscinas.py` ya traía
+  # 07:30/19:30 en el código (`CIERRES_GUARDIA`) — coincide con `turnos` de
+  # arriba. NOTA: el docstring del script original decía "07:00 y 19:00"
+  # como supuesto a confirmar, pero esa era prosa desactualizada que no
+  # coincidía con la constante real del código; no había bug funcional, solo
+  # documentación atrasada. Corregido aquí para que ambos (prosa y código)
+  # queden en un solo lugar y no vuelvan a divergir.
+  horas_cambio_guardia: ["07:30", "19:30"]
+  # Umbrales de calidad de instrumento (nivel_piscinas.py: SATURACION_ALTA/
+  # BAJA, MIN_CONGELADO). Un canal se descarta si está saturado o lleva este
+  # tiempo sin cambiar.
+  saturacion_alta_pct: 99.5
+  saturacion_baja_pct: 0.5
+  minutos_para_congelado: 60
+  # Duración mínima de un episodio bajo el mínimo para ser reportable a
+  # operaciones (episodios de 1-2 min son ruido de instrumento).
+  episodio_minimo_reportable_min: 30

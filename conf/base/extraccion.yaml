@@ -1,0 +1,45 @@
+# ==============================================================================
+# EXTRACCIÓN PI (AF SDK) — ESPESADORES C2
+# ==============================================================================
+# Ex-parámetros configurables embebidos en getDataAllTH.py / getAtributes.py /
+# searchTAg.py / verificaciondata.py. Solo corre en Windows con el AF SDK
+# instalado y pythonnet — no ejecutable en este entorno Linux (ver
+# docs/inventario_proyecto.md, hallazgo de reproducibilidad).
+
+servidor: "tpi.southernperu.com.pe"
+zona_horaria: "America/Lima"   # UTC-5 fijo desde 1994, sin DST
+
+rango:
+  inicio: "2024-07-14 00:00:00"
+  fin: "2026-09-02 00:00:00"   # null => ahora; revisar antes de cada corrida nueva
+
+intervalo_muestreo: "1m"   # notación PI: 'm' minutos, 'mo' meses (minúscula)
+timeout_ms: 500000
+
+# Prueba de humo (Principio #8 del traspaso): recortar a pocos días antes de
+# comprometer una corrida larga.
+modo_prueba: false
+dias_prueba: 2
+
+# Días por bloque de extracción (15 d x 1440 min x N tags ~ orden de 1-2M
+# valores por bloque). Bajar si el servidor da timeouts, subir si va holgado.
+chunk_dias: 15
+page_size: 60   # tags por página en la llamada bulk
+max_reintentos: 3
+espera_reintento_s: 30
+
+# Regla de vigencia entre datasets .parquet homónimos, confirmada por el
+# usuario (2026-09-06): manda el timestamp en el nombre del archivo — el más
+# reciente es el vigente. No depender de que quien mire la carpeta lo infiera.
+convencion_nombre: "espesadores_{fecha_extraccion:%Y%m%d_%H%M}.parquet"
+
+rutas:
+  salida: "data/00_raw"
+  chunks: "data/00_raw/.checkpoints"   # antes '.\\salida_pi\\_chunks' relativo a cwd
+  exportar_csv: true   # análisis 100% local (2026-09-06): se quiere parquet Y csv,
+                        # aunque el CSV de ~1.1M x 68 supere 1 GB
+  dtype_salida: "float64"
+
+# Ruta al AF SDK de OSIsoft, específica de cada máquina Windows — NO en el
+# repo. Definir en conf/local/extraccion.local.yaml (gitignored):
+#   af_sdk_path: 'C:\Program Files (x86)\PIPC\AF\PublicAssemblies\4.0'

@@ -1,0 +1,238 @@
+# ==============================================================================
+# TAGS PI — ESPESADORES DE RELAVES C2 (TH-001 / TH-002 / TH-003)
+# ==============================================================================
+# Única fuente de tags del proyecto. Ningún módulo de src/ debe tener un tag
+# escrito literalmente en el código: todo se lee de aquí (requisito de la
+# sección 6 del traspaso PROMPT_CLAUDE_CODE.md y criterio de aceptación 7/4).
+#
+# Para agregar un espesador nuevo: copiar el bloque de TH-001 en
+# `espesadores` y reemplazar cada tag. Los campos marcados `completar: true`
+# no estaban en el dataset original de TH-001 — su nombre es una suposición
+# y debe confirmarse con Instrumentación antes de usarlos.
+
+# ------------------------------------------------------------------------------
+# LISTA MAESTRA DE EXTRACCIÓN (src/espesadores/extraccion/extraer_pi.py).
+# Los 68 tags PI reales: (tag_pi, columna, grupo, descripcion). Único lugar
+# donde vive el nombre crudo del punto PI — antes embebido como lista de
+# tuplas dentro de getDataAllTH.py. `validar_tags()` sigue abortando ante
+# cualquier tag o columna duplicados (guarda de H-A, el bug de PB01/PB02).
+# Los 5 de grupo `aguas_abajo` con identidad resuelta en la auditoría de
+# 2026-09-06 (N-2) llevan su descriptor real; siguen sin rol de espesador
+# asignado (ver `no_asignados` más abajo) hasta decisión explícita.
+# ------------------------------------------------------------------------------
+extraccion_pi:
+  - [_293200_Alim_Total_PB01_ABB, Alim_Total_PB01, planta, "Tonelaje total alimentación Molino 1"]
+  - [_293200_Alim_Total_PB02_ABB, Alim_Total_PB02, planta, "Tonelaje total alimentación Molino 2"]
+  - [_296290_ALIM_RO_PROM_SC_ABB, ALIM_RO_PROM_SC, planta, "Alimentación rougher promedio Sc"]
+  - [_296290_Ratio_Con_Cu_ABB, Ratio_Con_Cu, planta, "Ratio de concentrado de Cu"]
+  - [C2_Ratio_concentracion_Output, Ratio_concentracion_Output, planta, "DCS - ratio concentración (Reporte Metalurgia)"]
+  - [C2_Sol_Overflow_Output, Sol_Overflow_Output, planta, "DCS - %sólido circuito overflow (Reporte Metalurgia) — muerto en PI, H-E"]
+  - [_294100_FLUJO_REBOSE_AGUA_G_ABB, FLUJO_REBOSE_AGUA_G, planta, "Flujo agua rebose global estimado C2 — congelado ~67% del tiempo, H-B"]
+
+  - [_294100_FLUJO_REBOSE_AGUA_TH1_ABB, FLUJO_REBOSE_AGUA_TH1, TH001, "Estimado flujo agua rebose TH1 — congelado ~67%, H-B; no historizado antes de dic-2025, H-C"]
+  - [_294100_LIT_1011_Flow_ABB, LIT_1011_Flow, TH001, "Flujo de ingreso E1"]
+  - [_294100_LIT_1011_ABB, LIT_1011, TH001, "Nivel cajón 294100DB001 TH001"]
+  - [_294100_FV_1001_ABB, FV_1001, TH001, "Válvula alimentación a E1"]
+  - [_294100TH001_PLC_BEDM_ABB, TH001_PLC_BEDM, TH001, "BedMass E1 (cama de sólidos)"]
+  - [_294100TH001_PLC_LVL_ABB, TH001_PLC_LVL, TH001, "Nivel interface E1"]
+  - [_294100TH001_PLC_TORK_ABB, TH001_PLC_TORK, TH001, "Torque rastra E1 (RESPUESTA, no consigna — Principio 3)"]
+  - [_294500_FIT_101_ABB, FIT_101, TH001, "Flujo agua dilución floculante E1"]
+  - [_294500_FIT_104_ABB, FIT_104, TH001, "Flujo floculante E1"]
+  - [_294100_PP_007A_Speed_ABB, PP_007A_Speed, TH001, "Velocidad bomba descarga PP-007 (tren 1)"]
+  - [_294100_PP_001A_U_Speed_ABB, PP_001A_U_Speed, TH001, "Velocidad bomba cizalla PP-001C (tren 1)"]
+  - [_294100_WT_146_ABB, WT_146, TH001, "%Sólidos descarga principal PP-007"]
+  - [_294100_DIT_146_ABB, DIT_146, TH001, "Densidad descarga PP-007"]
+  - [_294100_PP_008A_Speed_ABB, PP_008A_Speed, TH001, "Velocidad bomba descarga PP-008 (tren 2)"]
+  - [_294100_PP_002A_U_Speed_ABB, PP_002A_U_Speed, TH001, "Velocidad bomba cizalla PP-002C (tren 2)"]
+  - [_294100_WT_144_ABB, WT_144, TH001, "%Sólidos descarga secundaria PP-008"]
+  - [_294100_DIT_144_ABB, DIT_144, TH001, "Densidad descarga PP-008"]
+
+  - [_294100_FLUJO_REBOSE_AGUA_TH2_ABB, FLUJO_REBOSE_AGUA_TH2, TH002, "Estimado flujo agua rebose TH2"]
+  - [_294100_LIT_1111_Flow_ABB, LIT_1111_Flow, TH002, "Flujo de ingreso E2"]
+  - [_294100_LIT_1111_ABB, LIT_1111, TH002, "Nivel cajón 294100DB001 TH002"]
+  - [_294100_FV_1002_ABB, FV_1002, TH002, "Válvula alimentación a E2"]
+  - [_294100TH002_PLC_BEDM_ABB, TH002_PLC_BEDM, TH002, "BedMass E2 (cama de sólidos)"]
+  - [_294100TH002_PLC_LVL_ABB, TH002_PLC_LVL, TH002, "Nivel interface E2"]
+  - [_294100TH002_PLC_TORK_ABB, TH002_PLC_TORK, TH002, "Torque rastra E2 (RESPUESTA, no consigna)"]
+  - [_294500_FIT_102_ABB, FIT_102, TH002, "Flujo agua dilución floculante E2"]
+  - [_294500_FIT_105_ABB, FIT_105, TH002, "Flujo floculante E2"]
+  - [_294100_PP_009A_Speed_ABB, PP_009A_Speed, TH002, "Velocidad bomba descarga PP-009 (tren 1)"]
+  - [_294100_PP_003A_U_Speed_ABB, PP_003A_U_Speed, TH002, "Velocidad bomba cizalla PP-003C (tren 1)"]
+  - [_294100_WT_186_ABB, WT_186, TH002, "%Sólidos descarga principal PP-009"]
+  - [_294100_DIT_186_ABB, DIT_186, TH002, "Densidad descarga PP-009"]
+  - [_294100_PP_010A_Speed_ABB, PP_010A_Speed, TH002, "Velocidad bomba descarga PP-010 (tren 2)"]
+  - [_294100_PP_004A_U_Speed_ABB, PP_004A_U_Speed, TH002, "Velocidad bomba cizalla PP-004C (tren 2)"]
+  - [_294100_WT_184_ABB, WT_184, TH002, "%Sólidos descarga secundaria PP-010"]
+  - [_294100_DIT_184_ABB, DIT_184, TH002, "Densidad descarga PP-010"]
+
+  - [_294100_FLUJO_REBOSE_AGUA_TH3_ABB, FLUJO_REBOSE_AGUA_TH3, TH003, "Estimado flujo agua rebose TH3"]
+  - [_294100_LIT_1211_Flow_ABB, LIT_1211_Flow, TH003, "Flujo de ingreso E3"]
+  - [_294100_LIT_1211_ABB, LIT_1211, TH003, "Nivel cajón 294100DB001 TH003"]
+  - [_294100_FV_1003_ABB, FV_1003, TH003, "Válvula alimentación a E3"]
+  - [_294100TH003_PLC_BEDM_ABB, TH003_PLC_BEDM, TH003, "BedMass E3 (cama de sólidos)"]
+  - [_294100TH003_PLC_LVL_ABB, TH003_PLC_LVL, TH003, "Nivel interface E3"]
+  - [_294100TH003_PLC_TORK_ABB, TH003_PLC_TORK, TH003, "Torque rastra E3 (RESPUESTA, no consigna)"]
+  - [_294500_FIT_103_ABB, FIT_103, TH003, "Flujo agua dilución floculante E3"]
+  - [_294500_FIT_106_ABB, FIT_106, TH003, "Flujo floculante E3"]
+  - [_294100_PP_011A_Speed_ABB, PP_011A_Speed, TH003, "Velocidad bomba descarga PP-011 (tren 1)"]
+  - [_294100_PP_005A_U_Speed_ABB, PP_005A_U_Speed, TH003, "Velocidad bomba cizalla PP-005C (tren 1)"]
+  - [_294100_WT_234_ABB, WT_234, TH003, "%Sólidos descarga principal PP-011"]
+  - [_294100_DIT_234_ABB, DIT_234, TH003, "Densidad descarga PP-011"]
+  - [_294100_PP_012A_Speed_ABB, PP_012A_Speed, TH003, "Velocidad bomba descarga PP-012 (tren 2)"]
+  - [_294100_PP_006A_U_Speed_ABB, PP_006A_U_Speed, TH003, "Velocidad bomba cizalla PP-006C (tren 2)"]
+  - [_294100_WT_236_ABB, WT_236, TH003, "%Sólidos descarga secundaria PP-012"]
+  - [_294100_DIT_236_ABB, DIT_236, TH003, "Densidad descarga PP-012"]
+
+  # aguas_abajo: identidad resuelta en la auditoría de 2026-09-06 (N-2) a
+  # partir de data/00_raw/pi_metadata/. Siguen sin rol de espesador asignado.
+  - [_294300_FIT_114_ABB, FIT_114, aguas_abajo, "Flujo hacia Piscinas"]
+  - [_296300_LIT_106_ABB, LIT_106, aguas_abajo, "Nivel agua recup. 296300XC001 — Piscina 1 (asignado en dominio_piscinas)"]
+  - [_296300_LIT_107_ABB, LIT_107, aguas_abajo, "Nivel agua recup. 296300XC002 — Piscina 2 (asignado en dominio_piscinas)"]
+  - [_294300_LIT_108_ABB, LIT_108, aguas_abajo, "Nivel 294300TK001 — Recuperación de Agua Espesadores Relaves"]
+  - [_294300_LIT_109_ABB, LIT_109, aguas_abajo, "Nivel 294300TK002 — Recuperación de Agua Espesadores Relaves"]
+  - [_296300_FIT_123_ABB, FIT_123, aguas_abajo, "Flujo desde tanque principal de agua fresca hacia piscina — NO es rebose de espesadores (§5.2)"]
+  - [_298200_FIT_601_ABB, FIT_601, aguas_abajo, "Flujo desde recuperación de agua relaves QH hacia piscina — NO es rebose de espesadores (§5.2)"]
+
+  # Estado del sistema experto. Puntos digitales: se guarda el CÓDIGO de
+  # estado (AFEnumerationValue), no un flotante — ver `tags_digitales`.
+  - [SGS_DCS_294100TH01_STATUS_ABB, YY_4100TH001, STATUS, "Estado de uso del experto en E1"]
+  - [SGS_YY_4100TH002_00_ABB, YY_4100TH002, STATUS, "Estado de uso del experto en E2"]
+  - [SGS_DCS_294100TH03_STATUS_ABB, YY_4100TH003, STATUS, "Estado de uso del experto en E3"]
+
+tags_digitales: [YY_4100TH001, YY_4100TH002, YY_4100TH003]
+
+globales:
+  alim_total_molino: Alim_Total_PB01      # Tonelaje total alimentado al molino
+  ley_rougher: ALIM_RO_PROM_SC             # proxy de mineral, exógeno
+  ratio_cu: Ratio_Con_Cu                   # proxy de mineral, exógeno
+  ratio_conc_reporte: Ratio_concentracion_Output  # INSERVIBLE en TH-001 (86% hold) — E02 lo reconfirma
+  sol_overflow: Sol_Overflow_Output        # muerto en PI (H-E) — E02 usa el valor por defecto si falla
+  timestamp: timestamp
+
+espesadores:
+  TH-001:
+    nombre_largo: "Espesador de Relaves TH-001"
+    tag_equipo: "294100TH001"
+    flujo_alim: LIT_1011_Flow
+    flujos_todos: [LIT_1011_Flow, LIT_1111_Flow, LIT_1211_Flow]
+    presion_cama: TH001_PLC_BEDM
+    torque: TH001_PLC_TORK
+    nivel_interfaz: TH001_PLC_LVL
+    nivel_cajon: LIT_1011
+    valvula_alim: FV_1001
+    floculante: FIT_104
+    agua_dilucion: FIT_101
+    trenes:
+      - nombre: "TREN 1"
+        descarga: PP_007A_Speed
+        wt: WT_146
+        dit: DIT_146
+        cizalle: PP_001A_U_Speed
+      - nombre: "TREN 2"
+        descarga: PP_008A_Speed
+        wt: WT_144
+        dit: DIT_144
+        cizalle: PP_002A_U_Speed
+
+  TH-002:
+    nombre_largo: "Espesador de Relaves TH-002"
+    tag_equipo: "294100TH002"
+    flujo_alim: LIT_1111_Flow
+    flujos_todos: [LIT_1011_Flow, LIT_1111_Flow, LIT_1211_Flow]
+    presion_cama: {tag: TH002_PLC_BEDM, completar: true}
+    torque: {tag: TH002_PLC_TORK, completar: true}
+    nivel_interfaz: {tag: TH002_PLC_LVL, completar: true}
+    nivel_cajon: {tag: LIT_1111, completar: true}
+    valvula_alim: {tag: FV_1101, completar: true}
+    floculante: FIT_104   # verificar si es común o dedicado
+    agua_dilucion: FIT_101  # verificar si es común o dedicado
+    trenes:  # del diagrama P&ID: TH-002 descarga por PP009 (principal) y PP010
+      - nombre: "TREN 1"
+        descarga: {tag: PP_009A_Speed, completar: true}
+        wt: {tag: WT_154, completar: true}
+        dit: {tag: DIT_154, completar: true}
+        cizalle: {tag: PP_003A_U_Speed, completar: true}
+      - nombre: "TREN 2"
+        descarga: {tag: PP_010A_Speed, completar: true}
+        wt: {tag: WT_152, completar: true}
+        dit: {tag: DIT_152, completar: true}
+        cizalle: {tag: PP_004A_U_Speed, completar: true}
+
+  TH-003:
+    nombre_largo: "Espesador de Relaves TH-003"
+    tag_equipo: "294100TH003"
+    flujo_alim: LIT_1211_Flow
+    flujos_todos: [LIT_1011_Flow, LIT_1111_Flow, LIT_1211_Flow]
+    presion_cama: {tag: TH003_PLC_BEDM, completar: true}
+    torque: {tag: TH003_PLC_TORK, completar: true}
+    nivel_interfaz: {tag: TH003_PLC_LVL, completar: true}
+    nivel_cajon: {tag: LIT_1211, completar: true}
+    valvula_alim: {tag: FV_1201, completar: true}
+    floculante: FIT_104
+    agua_dilucion: FIT_101
+    trenes:  # del diagrama P&ID: TH-003 descarga por PP011 (principal) y PP012
+      - nombre: "TREN 1"
+        descarga: {tag: PP_011A_Speed, completar: true}
+        wt: {tag: WT_164, completar: true}
+        dit: {tag: DIT_164, completar: true}
+        cizalle: {tag: PP_005A_U_Speed, completar: true}
+      - nombre: "TREN 2"
+        descarga: {tag: PP_012A_Speed, completar: true}
+        wt: {tag: WT_162, completar: true}
+        dit: {tag: DIT_162, completar: true}
+        cizalle: {tag: PP_006A_U_Speed, completar: true}
+
+# ------------------------------------------------------------------------------
+# Dominio: piscinas de recuperación de agua (src/espesadores/dominio/piscinas.py)
+# ------------------------------------------------------------------------------
+# Antes hardcodeados como COL_A/COL_B directamente en el script (hallazgo de
+# la Tarea B, 2026-09-06) — corregido al migrar. Regla de derivación
+# confirmada por el usuario: si ambos son parecidos, el valor es válido tal
+# cual; si difieren mucho, vale el mayor (ver conf/base/reglas_operativas.yaml
+# para el umbral y los horarios de cambio de guardia).
+piscinas:
+  transmisor_a: LIT_106   # Piscina 1 (296300XC001)
+  transmisor_b: LIT_107   # Piscina 2 (296300XC002)
+
+# ------------------------------------------------------------------------------
+# Dominio: diagnóstico de guardias (src/espesadores/dominio/guardias.py).
+# Variables sobre las que se busca efecto de guardia — solo consignas y
+# resultados; el torque queda fuera por ser respuesta, no acción del operador.
+# ------------------------------------------------------------------------------
+diagnostico_guardias:
+  variables_interes:
+    - FIT_104
+    - FIT_101
+    - TH001_PLC_BEDM
+    - WT_146
+    - WT_144
+    - PP_007A_Speed
+    - PP_001A_U_Speed
+    - FLUJO_REBOSE_AGUA_TH1
+    - LIT_106
+    - LIT_107
+
+# ------------------------------------------------------------------------------
+# Tags confirmados por PI pero SIN rol asignado en el pipeline (bloque aparte,
+# requisito de la sección 6 del traspaso: no deben entrar al modelo sin
+# decisión explícita). Identidad resuelta en la auditoría de 2026-09-06 (N-2
+# de docs/inventario_proyecto.md) a partir de data/00_raw/pi_metadata/.
+# ------------------------------------------------------------------------------
+no_asignados:
+  - tag: FIT_114
+    descriptor: "Flujo hacia Piscinas"
+    unidad: m3/h
+  - tag: LIT_106
+    descriptor: "Nivel agua recup. 296300XC001 — Piscina 1"
+    unidad: "%"
+    nota: "asignado como dominio_piscinas.transmisor_a; queda listado aquí también por trazabilidad"
+  - tag: LIT_107
+    descriptor: "Nivel agua recup. 296300XC002 — Piscina 2"
+    unidad: "%"
+    nota: "asignado como dominio_piscinas.transmisor_b; queda listado aquí también por trazabilidad"
+  - tag: LIT_108
+    descriptor: "Nivel 294300TK001 — Recuperación de Agua Espesadores Relaves"
+    unidad: "%"
+  - tag: LIT_109
+    descriptor: "Nivel 294300TK002 — Recuperación de Agua Espesadores Relaves"
+    unidad: "%"

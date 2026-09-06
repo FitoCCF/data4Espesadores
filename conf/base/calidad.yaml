@@ -1,0 +1,37 @@
+# ==============================================================================
+# UMBRALES DE CALIDAD DE DATO Y DIAGNÓSTICO — ESPESADORES C2
+# ==============================================================================
+# Ex-SECCION 5 y 6 de config_espesadores.py.
+
+# Rangos físicos de validación por TIPO de variable (no por tag: así aplican a
+# cualquier espesador sin reescribirlos). Sustento: Narasimhan & Jordache
+# (2000) — un valor fuera de rango es un ERROR GRUESO, se anula la CELDA, no
+# la fila.
+rangos_por_tipo:
+  flujo_alim: [0, 8000]          # m3/h
+  presion_cama: [0, 100]         # %
+  torque: [0, 100]               # %
+  nivel_interfaz: [0, 10]        # m
+  nivel_cajon: [0, 105]          # %
+  valvula_alim: [0, 100]         # % apertura
+  floculante: [0, 50]            # m3/h
+  agua_dilucion: [0, 30]         # l/s (se multiplica x3.6 -> m3/h)
+  descarga: [0, 100]             # % velocidad
+  cizalle: [0, 100]              # % velocidad
+  wt: [0, 80]                    # % sólidos
+  dit: [1.0, 2.2]                # t/m3 (densidad de pulpa > agua)
+  alim_total_molino: [0, 2500]   # t/h
+  ley_rougher: [0, 80]           # %
+  ratio_cu: [0, 200]             # adimensional
+  ratio_conc_reporte: [0, 100]   # adimensional
+
+# Umbrales de diagnóstico de variables inservibles (etapa E02).
+diagnostico:
+  # Si un solo valor concentra más de este % de las filas, la variable tiene
+  # HOLD y no sirve para clustering ni para modelar (TH-001: Ratio_concentracion_Output = 86%).
+  max_share_valor_unico: 0.50
+  # Número mínimo de valores distintos para considerar que la señal está viva.
+  min_valores_unicos: 500
+  # Si el CV de la gravedad específica implícita es menor a esto, %sólidos y
+  # densidad NO son independientes (SG fijo del DCS). TH-001 dio CV = 0.67%.
+  cv_max_sg_independiente: 0.02

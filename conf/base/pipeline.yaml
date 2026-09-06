@@ -1,0 +1,29 @@
+# ==============================================================================
+# PARÁMETROS DEL PIPELINE E01-E11 Y RUTAS
+# ==============================================================================
+# Ex-SECCION 3 y 7 de config_espesadores.py.
+#
+# CORRECCIÓN CRÍTICA (N-1 de docs/inventario_proyecto.md, 2026-09-06): el
+# `RUTAS.entrada` original apuntaba a `datos.parquet`, un dataset de 31
+# columnas con el artefacto de `ffill` (H-B) ya confirmado. Aquí apunta al
+# dataset canónico verificado en la Tarea A.
+
+# Ventanas de muestreo en MINUTOS. Se recalculan a MUESTRAS en E01 según el
+# período de muestreo real detectado.
+ventanas_min:
+  congelamiento: 30        # detección de señal pegada (stuck-at)
+  hampel: 21                # filtro robusto de valores atípicos
+  estado_estacionario: 60   # ventana del test de estabilidad
+  agregacion_mineral: 60    # el mineral varía lento: agregar a 1 h
+
+# Coeficiente de variación máximo dentro de la ventana para declarar estado
+# estacionario (0.05 = la variable no se mueve más de 5% en la ventana).
+cv_estado_estacionario: 0.05
+
+rutas:
+  entrada: "data/00_raw/espesadores_20260906_1317.parquet"   # CORREGIDO — ver N-1
+  roles_guardia:
+    - "data/00_raw/rol_operaciones/Rol_Operaciones_2024.md"
+    - "data/00_raw/rol_operaciones/Rol_Operaciones_2025.md"
+    - "data/00_raw/rol_operaciones/Rol_Operaciones_2026.md"
+  salidas: "data/06_reporting"   # antes "salidas" relativo a cwd

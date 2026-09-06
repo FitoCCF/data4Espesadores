@@ -1,0 +1,28 @@
+# entorno
+.pixi/*
+!.pixi/config.toml
+
+# checkpoints y compilados de Jupyter/Python
+**/*-checkpoint.*
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# configuración local (credenciales, rutas de máquina)
+conf/local/*
+!conf/local/.gitkeep
+
+# datos (se versiona la estructura, no el contenido pesado)
+data/00_raw/*
+data/01_interim/*
+data/02_primary/*
+data/03_features/*
+data/04_model_input/*
+data/05_models/*
+data/06_reporting/*
+data/99_deprecated/*
+!data/**/.gitkeep
+!data/**/README.md
+!data/00_raw/rol_operaciones/
+!data/00_raw/rol_operaciones/*.md
