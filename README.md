@@ -65,14 +65,17 @@ el detalle de cada hallazgo (H-A a H-H, N-1 a N-7). En resumen:
 3. Ningún tag ni ruta absoluta hardcodeados en `src/` — guardado por `tests/test_sin_hardcodeo.py`.
 4. El espesador es un parámetro (`conf/base/tags.yaml`), no una copia del código.
 
-## Resultados obtenidos en TH-001 (recomputados 2026-09-06 contra el dataset canónico, post-migración)
+## Resultados obtenidos en TH-001 (recomputados 2026-09-07 contra la reextracción manual, post-migración)
 
-Primera corrida de `pixi run pipeline TH-001` contra
-`data/00_raw/espesadores_20260906_1317.parquet` (69 columnas, sin el
-artefacto de `ffill` de H-B, con la corrección de PB01/PB02 de H-A). Estas
-cifras **reemplazan** a las de la corrida anterior contra `datos.parquet`
-(N-1), archivada en `data/99_deprecated/salidas_20260727_datos_parquet/` por
-trazabilidad — no usar esa carpeta para nada más.
+Corrida de `pixi run pipeline TH-001` contra
+`data/00_raw/datos_espesadores_20260906_1918.parquet` (68 tags de
+`conf/base/tags.yaml::extraccion_pi`, extraídos de cero el 2026-09-06/07
+desde la máquina Windows con `pixi run -e extraccion extraer`, sin el
+artefacto de `ffill` de H-B, con la corrección de PB01/PB02 de H-A). Mismo
+rango (2024-07-14 → 2026-09-02) y mismas 1,123,200 filas crudas que la
+corrida anterior contra `espesadores_20260906_1317.parquet` (borrada al
+reiniciar la extracción desde cero) — cifras idénticas, confirma que la
+reextracción es reproducible.
 
 - Control de calidad **superado**: 4 de 5 bandas de tonelaje con desvío < 30%
 - Sensibilidad: **11.0 m³/h por punto de % sólidos de descarga** (ton=396 t/h, wt=60.2%)

@@ -21,7 +21,12 @@ ventanas_min:
 cv_estado_estacionario: 0.05
 
 rutas:
-  entrada: "data/00_raw/espesadores_20260906_1317.parquet"   # CORREGIDO — ver N-1
+  # Regla de vigencia (conf/base/extraccion.yaml): manda el timestamp del
+  # nombre del archivo. Reemplaza a espesadores_20260906_1317.parquet
+  # (borrado en la limpieza de datos del 2026-09-06 al reiniciar la
+  # extracción desde cero) por la reextracción de los mismos 68 tags,
+  # 780 días, hecha desde la máquina Windows el 2026-09-06/07.
+  entrada: "data/00_raw/datos_espesadores_20260906_1918.parquet"
   roles_guardia:
     - "data/00_raw/rol_operaciones/Rol_Operaciones_2024.md"
     - "data/00_raw/rol_operaciones/Rol_Operaciones_2025.md"
