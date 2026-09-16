@@ -13,6 +13,11 @@ __pycache__/
 conf/local/*
 !conf/local/.gitkeep
 
+# generado a partir de tags.yaml::extraccion_pi para pasarlo a pi_tool.py
+# (--tags-file); no es fuente de verdad, se puede regenerar en cualquier
+# momento con un one-liner (ver docs/bitacora_hallazgos.md, N-8)
+conf/base/tags_extraccion.txt
+
 # datos (se versiona la estructura, no el contenido pesado)
 data/00_raw/*
 data/01_interim/*

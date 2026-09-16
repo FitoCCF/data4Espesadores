@@ -8,9 +8,13 @@ A-C (`docs/inventario_proyecto.md`, `docs/plan_migracion.md`).
 Convención: cada hallazgo lleva **evidencia**, **nivel de confianza** y
 **estado** (si ya se corrigió/verificó en la migración de 2026-09-06 o si
 sigue abierto). Los hallazgos H-A a H-H vienen de la sesión que originó el
-traspaso; los N-1 a N-7 son de la auditoría de migración de esta sesión.
-Todos están re-verificados contra `data/00_raw/espesadores_20260906_1317.parquet`
-(el dataset canónico) salvo donde se indica lo contrario.
+traspaso; los N-1 a N-7 son de la auditoría de migración de 2026-09-06; los
+N-8 a N-11 son de la sesión de 2026-09-15/16 (re-extracción `recorded` y
+corrección de tags). H-A a N-7 están verificados contra
+`data/00_raw/espesadores_20260906_1317.parquet` (interpolado, 780 días); a
+partir de N-8 el dataset canónico es
+`data/00_raw/datos_espesadores_recorded_20260916_0357.parquet` (recorded,
+793 días) — ver N-8.
 
 ---
 
@@ -33,6 +37,10 @@ Todos están re-verificados contra `data/00_raw/espesadores_20260906_1317.parque
 | N-5 | Todas las salidas E01-E11 viejas comparten el origen contaminado de N-1 | CONFIRMADO | Regeneradas contra el dataset canónico |
 | N-6 | `E05_balance_agua` no usa el tag crudo de rebose — ya implementa la ruta de H-C | CONFIRMADO | Sin acción; corrige una suposición del propio traspaso |
 | N-7 | Notebooks rescatados de checkpoints eran el origen probable de "trenes acoplados" | CONFIRMADO | Rescatados a `notebooks/regimenes_mineral/`; "fito" confirmado como otro proyecto sin relación |
+| N-8 | Re-extracción con método `recorded` (dato crudo archivado) en vez de `interpolated`, vía pasarela PiGateway desde WSL2 | CONFIRMADO | **Hecho** — nuevo dataset canónico, 793 días, 1.142.242 filas, continuidad de grilla verificada |
+| N-9 | El mapeo de roles de TH-002/TH-003 en `tags.yaml` (`completar: true`) apuntaba a tags inventados que no existen en PI | CONFIRMADO | **Corregido** — reemplazados por los tags reales ya validados en `extraccion_pi` |
+| N-10 | El rango real de historia en PI llega a 2022-12-30 (1354 días), más que los 780 días asumidos en `extraccion.yaml` | CONFIRMADO | Abierto — la re-extracción de esta sesión usó 2024-07-14 por continuidad con la corrida anterior, no el máximo disponible |
+| N-11 | Pipeline E01-E11 re-corrido para TH-001/002/003 contra el dataset `recorded` | CONFIRMADO | **Hecho**, sin errores — ver cifras nuevas abajo |
 
 ---
 
@@ -389,6 +397,131 @@ limpios) se rescataron de `.ipynb_checkpoints/` a
 `notebooks/regimenes_mineral/` con nombres descriptivos, antes de que la
 limpieza general de checkpoints los borrara por error junto con la basura
 real de Jupyter.
+
+---
+
+## N-8. Re-extracción con método `recorded` vía pasarela PiGateway — CONFIRMADO, HECHO
+
+**Motivación:** la extracción original (`extraer_pi.py`) usa `InterpolatedValues`
+del AF SDK, que solo corre en Windows con pythonnet, y que interpola en el
+servidor sin distinguir tags `step` de tags continuos (advertencia propia de
+`pi_client.py`: "un tag congelado y uno estable son indistinguibles ahí").
+Se repitió la extracción con `recorded` (dato crudo archivado, tal como lo
+entregó el historiador) desde WSL2, vía la pasarela HTTP `PiGateway`
+(`data4cdpv1_local/scripts/pi_tool.py`/`pi_client.py`), reconstruyendo a
+grilla de 1 minuto con `ReconstructorGrilla`: ZOH (orden cero) para tags con
+atributo `step`, interpolación lineal solo para tags continuos, y NaN
+explícito donde el hueco supera 1.5× el `compmax` del tag (pérdida de dato
+real, no compresión).
+
+**Incidente de memoria:** la primera corrida (793 días, 68 tags, una sola
+llamada) murió por OOM (~31 GB) al consolidar los 265 bloques crudos en
+memoria antes de reconstruir la grilla — confirmado en `dmesg`
+(`Out of memory: Killed process ... total-vm:47052188kB`). **Corrección:**
+se partió la extracción en 7 tramos de ~120 días cada uno (mismo rango total,
+misma carpeta de checkpoints `_chunks_1min/`), cada uno consolidado y
+reconstruido por separado. Se aplicó además un fix a `pi_tool.py` (ambos en
+`data4cdpv1_local/scripts/`, fuera de este repo): el código escribía un CSV
+crudo evento-por-evento redundante (hasta 2 GB por tramo) incluso cuando ya
+se pedía `--grilla`; se corrigió para que no lo escriba, y se agregó log
+verbose por bloque leído y por tag reconstruido.
+
+**Resultado:** 7 archivos `_valores.csv` concatenados cronológicamente,
+columnas renombradas de tag PI crudo a `columna` de `tags.yaml`, guardados
+como `data/00_raw/datos_espesadores_recorded_20260916_0357.parquet`:
+
+| Métrica | Valor |
+|---|---|
+| Rango | 2024-07-14 00:00 → 2026-09-15 05:21 (793 días) |
+| Filas | 1.142.242 |
+| Columnas | 68 (67 con al menos un dato; `Sol_Overflow_Output` 100% NaN, ver H-E) |
+| Continuidad de índice | 0 huecos, 0 duplicados (verificado contra grilla teórica de 1 min) |
+| Cobertura global | 87,23% |
+
+**Corrección aplicada:** `conf/base/pipeline.yaml::rutas.entrada` apunta al
+nuevo parquet. El anterior (`datos_espesadores_20260906_1918.parquet`,
+método `interpolated`) queda en disco sin borrar, por si se necesita
+comparar.
+
+**Pendiente:** esta corrida usó el mismo inicio que la extracción anterior
+(2024-07-14) por continuidad, no el máximo de historia disponible en PI
+(2022-12-30, ver N-10). Extender el rango es una decisión pendiente del
+usuario, no algo que haya que resolver de oficio.
+
+---
+
+## N-9. Mapeo de roles TH-002/TH-003 apuntaba a tags inexistentes — CONFIRMADO, CORREGIDO
+
+**Evidencia:** validando los 68 tags de `extraccion_pi` contra PI en vivo
+(`pi_tool.py perfil`/`buscar`), los campos `completar: true` de
+`espesadores.TH-002`/`TH-003` resultaron ser suposiciones erróneas:
+
+- `FV_1101` **existe** en PI, pero es `_293400_FV_1101_ABB` — la válvula del
+  Molino 1 (área 293400), no la válvula de alimentación de ningún espesador.
+- `WT_154`, `DIT_154`, `WT_152`, `DIT_152`, `FV_1201`, `WT_164`, `DIT_164`,
+  `WT_162`, `DIT_162` **no existen** en PI bajo ningún patrón de búsqueda
+  probado (`*WT_15*`, `*WT_16*`, `*FV_1201*`, etc.).
+- `floculante`/`agua_dilucion` de TH-002 y TH-003 apuntaban por error a los
+  tags dedicados de TH-001 (`FIT_104`/`FIT_101`), pese a que ya existían
+  tags dedicados y validados para E2 (`FIT_105`/`FIT_102`) y E3
+  (`FIT_106`/`FIT_103`) en la propia lista `extraccion_pi`.
+
+Es la misma clase de bug silencioso que H-A (Principio #2): estos campos se
+habrían usado en `e04_trenes.py`/etc. sin ningún error, produciendo NaN o
+datos de otro equipo para TH-002/TH-003.
+
+**Corrección aplicada:** reemplazados por los tags reales, ya presentes y
+con 1354 días de historia verificada en `extraccion_pi`: `WT_186`/`DIT_186`/
+`WT_184`/`DIT_184`/`FV_1002` para TH-002; `WT_234`/`DIT_234`/`WT_236`/
+`DIT_236`/`FV_1003` para TH-003. Ya no queda ningún `completar: true` en
+`tags.yaml` — `TAGS_A_COMPLETAR` en `config.py` resuelve vacío.
+
+**Guarda:** los 8 tests existentes (`tests/test_config_tags.py` y demás)
+siguen pasando tras el cambio.
+
+---
+
+## N-10. El historiador PI tiene más rango del asumido — CONFIRMADO, ABIERTO
+
+**Evidencia:** `pi_tool.py perfil` contra los 68 tags de `extraccion_pi`
+muestra historia desde **2022-12-30** para la mayoría de los tags de
+proceso (1354 días), no desde 2024-07-14 (780 días) como asume
+`conf/base/extraccion.yaml::rango.inicio`. La re-extracción `recorded` de
+esta sesión (N-8) mantuvo 2024-07-14 por continuidad con la corrida
+anterior — extender hacia atrás es una decisión de alcance, no un bug.
+
+**Adicional:** `C2_Ratio_concentracion_Output` dejó de recibir datos el
+2026-06-16 (91 días de rezago al momento de esta validación) — no es un
+tag muerto como `Sol_Overflow_Output` (H-E), pero está actualmente
+congelado/sin actualizar en PI.
+
+---
+
+## N-11. Pipeline E01-E11 re-corrido contra el dataset `recorded` — CONFIRMADO, HECHO
+
+**Evidencia:** `pixi run pipeline TH-001|TH-002|TH-003` corridos de punta a
+punta contra `datos_espesadores_recorded_20260916_0357.parquet` (N-8), sin
+errores ni warnings en ningún caso (verificado con `grep -i "error|warn"`
+sobre el log completo de cada corrida). 21 archivos de salida + one-pager
+HTML por espesador, en `data/06_reporting/TH00{1,2,3}/`.
+
+**Cifras nuevas (reemplazan cualquier cifra de corridas con dataset
+`interpolated`, Principio #10):**
+
+| | TH-001 | TH-002 | TH-003 |
+|---|---:|---:|---:|
+| E09 — rango entre guardias (nivel de proceso) | 0,41 pp (5 m³/h) | 0,60 pp (9 m³/h) | — |
+| E09 — efecto significativo (p<0,05) | `TH001_PLC_LVL`, `vel_descarga` | `TH002_PLC_LVL` (guardia pesa más que mineral) | — |
+| E10 — brecha recuperación alta/baja por mineral | 5,3 – 7,2 pp | 7,0 – 9,3 pp | 7,7 – 9,6 pp |
+| E10 — ganancia a tonelaje constante | +39 a +52 m³/h | +71 a +96 m³/h | +67 a +80 m³/h |
+| E11 — Tren 2 vs Tren 1 (emparejado) | gana 35/35 celdas, +1,60 pp (18 m³/h) | gana 36/36 celdas, +3,13 pp (46 m³/h) | gana 34/36 celdas, +3,32 pp (41 m³/h) |
+
+**Nota de alcance:** estas cifras usan el dataset `recorded` reconstruido a
+grilla de 1 min (N-8), distinto en método de extracción del dataset
+`interpolated` usado en la corrida de N-1/N-5. No se hizo una comparación
+número-a-número entre ambos métodos en esta sesión — pendiente si se quiere
+cuantificar cuánto cambia el resultado por el método de extracción en sí
+(más allá del rango temporal, que es prácticamente el mismo).
 
 ---
 

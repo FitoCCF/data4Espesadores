@@ -6,9 +6,47 @@
 # sección 6 del traspaso PROMPT_CLAUDE_CODE.md y criterio de aceptación 7/4).
 #
 # Para agregar un espesador nuevo: copiar el bloque de TH-001 en
-# `espesadores` y reemplazar cada tag. Los campos marcados `completar: true`
-# no estaban en el dataset original de TH-001 — su nombre es una suposición
-# y debe confirmarse con Instrumentación antes de usarlos.
+# `espesadores` y reemplazar cada tag.
+#
+# Validación 2026-09-15 contra PI vía data4cdpv1_local/scripts/pi_tool.py
+# (pasarela PiGateway, `perfil`/`buscar`): 67/68 tags de `extraccion_pi`
+# existen y tienen historia (hasta 1354 días, desde 2022-12-30 — más rango
+# del asumido en extraccion.yaml). Único inexistente: `C2_Sol_Overflow_Output`
+# (H-E) — no hay punto PI con ese nombre exacto; los puntos reales son
+# `C2_Sol_Overflow_average_Output` / `_L1_Output` / `_L2_Output`, pero solo
+# tienen UN evento historizado (2026-09-10), así que H-E se sostiene en la
+# práctica aunque el nombre en `globales.sol_overflow` esté mal escrito.
+#
+# Los campos antes marcados `completar: true` para TH-002/TH-003 eran
+# suposiciones erróneas: `FV_1101` existe en PI pero es la válvula del
+# Molino 1 (`_293400_FV_1101_ABB`, area 293400), no un espesador; `WT_154`,
+# `DIT_154`, `WT_152`, `DIT_152`, `FV_1201`, `WT_164`, `DIT_164`, `WT_162`,
+# `DIT_162` no existen en PI bajo ningún patrón buscado. Se reemplazaron por
+# los tags reales ya presentes y validados en `extraccion_pi` (WT_186/
+# DIT_186/WT_184/DIT_184/FV_1002 para TH-002; WT_234/DIT_234/WT_236/
+# DIT_236/FV_1003 para TH-003). De paso se corrigió que `floculante`/
+# `agua_dilucion` de TH-002 y TH-003 apuntaban por error a los tags
+# dedicados de TH-001 (FIT_104/FIT_101) en vez de a FIT_105/FIT_102 (E2) y
+# FIT_106/FIT_103 (E3), que sí existen y ya estaban en la lista maestra.
+#
+# Insights operativos confirmados por el usuario (2026-09-15):
+#   - EL INSIGHT PRINCIPAL DEL PROYECTO ES EL NIVEL DE PISCINA (LIT_106/
+#     LIT_107, ver bloque `piscinas` más abajo). Cualquier otra señal de
+#     recuperación de agua (rebose directo, FIT_114) es secundaria o
+#     indirecta frente a esta.
+#   - FIT_114 (flujo hacia piscinas desde los tanques temporales) es un
+#     INDICADOR INDIRECTO de buena recuperación de agua: cuando sube el
+#     nivel de los tanques 294300TK001/TK002 (LIT_108/LIT_109), se activan
+#     automáticamente más bombas y aumenta FIT_114 hacia las piscinas. Es
+#     decir, FIT_114 responde a LIT_108/LIT_109, no al revés — ver notas en
+#     `no_asignados` más abajo.
+#   - Las válvulas de alimentación FV_1001/FV_1002/FV_1003 (`valvula_alim`
+#     de cada espesador en `espesadores`, abajo) las mueve el operador
+#     manualmente. Cómo las mueven, y si ese patrón cambia según el tipo de
+#     mineral (proxies en `globales`: `ley_rougher`, `ratio_cu`,
+#     `alim_total_molino`), es una variable de interés pendiente de
+#     analizar — no confundir con el torque de rastra (H de Principio 3),
+#     que es respuesta del proceso y no acción del operador.
 
 # ------------------------------------------------------------------------------
 # LISTA MAESTRA DE EXTRACCIÓN (src/espesadores/extraccion/extraer_pi.py).
@@ -32,7 +70,7 @@ extraccion_pi:
   - [_294100_FLUJO_REBOSE_AGUA_TH1_ABB, FLUJO_REBOSE_AGUA_TH1, TH001, "Estimado flujo agua rebose TH1 — congelado ~67%, H-B; no historizado antes de dic-2025, H-C"]
   - [_294100_LIT_1011_Flow_ABB, LIT_1011_Flow, TH001, "Flujo de ingreso E1"]
   - [_294100_LIT_1011_ABB, LIT_1011, TH001, "Nivel cajón 294100DB001 TH001"]
-  - [_294100_FV_1001_ABB, FV_1001, TH001, "Válvula alimentación a E1"]
+  - [_294100_FV_1001_ABB, FV_1001, TH001, "Válvula alimentación a E1 — apertura manual del operador, variable de interés (ver nota al inicio del archivo)"]
   - [_294100TH001_PLC_BEDM_ABB, TH001_PLC_BEDM, TH001, "BedMass E1 (cama de sólidos)"]
   - [_294100TH001_PLC_LVL_ABB, TH001_PLC_LVL, TH001, "Nivel interface E1"]
   - [_294100TH001_PLC_TORK_ABB, TH001_PLC_TORK, TH001, "Torque rastra E1 (RESPUESTA, no consigna — Principio 3)"]
@@ -50,7 +88,7 @@ extraccion_pi:
   - [_294100_FLUJO_REBOSE_AGUA_TH2_ABB, FLUJO_REBOSE_AGUA_TH2, TH002, "Estimado flujo agua rebose TH2"]
   - [_294100_LIT_1111_Flow_ABB, LIT_1111_Flow, TH002, "Flujo de ingreso E2"]
   - [_294100_LIT_1111_ABB, LIT_1111, TH002, "Nivel cajón 294100DB001 TH002"]
-  - [_294100_FV_1002_ABB, FV_1002, TH002, "Válvula alimentación a E2"]
+  - [_294100_FV_1002_ABB, FV_1002, TH002, "Válvula alimentación a E2 — apertura manual del operador, variable de interés (ver nota al inicio del archivo)"]
   - [_294100TH002_PLC_BEDM_ABB, TH002_PLC_BEDM, TH002, "BedMass E2 (cama de sólidos)"]
   - [_294100TH002_PLC_LVL_ABB, TH002_PLC_LVL, TH002, "Nivel interface E2"]
   - [_294100TH002_PLC_TORK_ABB, TH002_PLC_TORK, TH002, "Torque rastra E2 (RESPUESTA, no consigna)"]
@@ -68,7 +106,7 @@ extraccion_pi:
   - [_294100_FLUJO_REBOSE_AGUA_TH3_ABB, FLUJO_REBOSE_AGUA_TH3, TH003, "Estimado flujo agua rebose TH3"]
   - [_294100_LIT_1211_Flow_ABB, LIT_1211_Flow, TH003, "Flujo de ingreso E3"]
   - [_294100_LIT_1211_ABB, LIT_1211, TH003, "Nivel cajón 294100DB001 TH003"]
-  - [_294100_FV_1003_ABB, FV_1003, TH003, "Válvula alimentación a E3"]
+  - [_294100_FV_1003_ABB, FV_1003, TH003, "Válvula alimentación a E3 — apertura manual del operador, variable de interés (ver nota al inicio del archivo)"]
   - [_294100TH003_PLC_BEDM_ABB, TH003_PLC_BEDM, TH003, "BedMass E3 (cama de sólidos)"]
   - [_294100TH003_PLC_LVL_ABB, TH003_PLC_LVL, TH003, "Nivel interface E3"]
   - [_294100TH003_PLC_TORK_ABB, TH003_PLC_TORK, TH003, "Torque rastra E3 (RESPUESTA, no consigna)"]
@@ -85,11 +123,11 @@ extraccion_pi:
 
   # aguas_abajo: identidad resuelta en la auditoría de 2026-09-06 (N-2) a
   # partir de data/00_raw/pi_metadata/. Siguen sin rol de espesador asignado.
-  - [_294300_FIT_114_ABB, FIT_114, aguas_abajo, "Flujo hacia Piscinas"]
-  - [_296300_LIT_106_ABB, LIT_106, aguas_abajo, "Nivel agua recup. 296300XC001 — Piscina 1 (asignado en dominio_piscinas)"]
-  - [_296300_LIT_107_ABB, LIT_107, aguas_abajo, "Nivel agua recup. 296300XC002 — Piscina 2 (asignado en dominio_piscinas)"]
-  - [_294300_LIT_108_ABB, LIT_108, aguas_abajo, "Nivel 294300TK001 — Recuperación de Agua Espesadores Relaves"]
-  - [_294300_LIT_109_ABB, LIT_109, aguas_abajo, "Nivel 294300TK002 — Recuperación de Agua Espesadores Relaves"]
+  - [_294300_FIT_114_ABB, FIT_114, aguas_abajo, "Flujo hacia Piscinas desde tanques temporales — sube cuando LIT_108/LIT_109 suben y arrancan más bombas automáticamente; indicador INDIRECTO de buena recuperación de agua (confirmado por el usuario, 2026-09-15)"]
+  - [_296300_LIT_106_ABB, LIT_106, aguas_abajo, "Nivel agua recup. 296300XC001 — Piscina 1 (asignado en dominio_piscinas; INSIGHT PRINCIPAL del proyecto)"]
+  - [_296300_LIT_107_ABB, LIT_107, aguas_abajo, "Nivel agua recup. 296300XC002 — Piscina 2 (asignado en dominio_piscinas; INSIGHT PRINCIPAL del proyecto)"]
+  - [_294300_LIT_108_ABB, LIT_108, aguas_abajo, "Nivel 294300TK001 — Recuperación de Agua Espesadores Relaves. Al subir, arranca automáticamente más bombeo hacia piscinas (sube FIT_114)"]
+  - [_294300_LIT_109_ABB, LIT_109, aguas_abajo, "Nivel 294300TK002 — Recuperación de Agua Espesadores Relaves. Al subir, arranca automáticamente más bombeo hacia piscinas (sube FIT_114)"]
   - [_296300_FIT_123_ABB, FIT_123, aguas_abajo, "Flujo desde tanque principal de agua fresca hacia piscina — NO es rebose de espesadores (§5.2)"]
   - [_298200_FIT_601_ABB, FIT_601, aguas_abajo, "Flujo desde recuperación de agua relaves QH hacia piscina — NO es rebose de espesadores (§5.2)"]
 
@@ -139,48 +177,48 @@ espesadores:
     tag_equipo: "294100TH002"
     flujo_alim: LIT_1111_Flow
     flujos_todos: [LIT_1011_Flow, LIT_1111_Flow, LIT_1211_Flow]
-    presion_cama: {tag: TH002_PLC_BEDM, completar: true}
-    torque: {tag: TH002_PLC_TORK, completar: true}
-    nivel_interfaz: {tag: TH002_PLC_LVL, completar: true}
-    nivel_cajon: {tag: LIT_1111, completar: true}
-    valvula_alim: {tag: FV_1101, completar: true}
-    floculante: FIT_104   # verificar si es común o dedicado
-    agua_dilucion: FIT_101  # verificar si es común o dedicado
+    presion_cama: TH002_PLC_BEDM
+    torque: TH002_PLC_TORK
+    nivel_interfaz: TH002_PLC_LVL
+    nivel_cajon: LIT_1111
+    valvula_alim: FV_1002
+    floculante: FIT_105       # dedicado E2 (antes apuntaba por error a FIT_104 de E1)
+    agua_dilucion: FIT_102    # dedicado E2 (antes apuntaba por error a FIT_101 de E1)
     trenes:  # del diagrama P&ID: TH-002 descarga por PP009 (principal) y PP010
       - nombre: "TREN 1"
-        descarga: {tag: PP_009A_Speed, completar: true}
-        wt: {tag: WT_154, completar: true}
-        dit: {tag: DIT_154, completar: true}
-        cizalle: {tag: PP_003A_U_Speed, completar: true}
+        descarga: PP_009A_Speed
+        wt: WT_186
+        dit: DIT_186
+        cizalle: PP_003A_U_Speed
       - nombre: "TREN 2"
-        descarga: {tag: PP_010A_Speed, completar: true}
-        wt: {tag: WT_152, completar: true}
-        dit: {tag: DIT_152, completar: true}
-        cizalle: {tag: PP_004A_U_Speed, completar: true}
+        descarga: PP_010A_Speed
+        wt: WT_184
+        dit: DIT_184
+        cizalle: PP_004A_U_Speed
 
   TH-003:
     nombre_largo: "Espesador de Relaves TH-003"
     tag_equipo: "294100TH003"
     flujo_alim: LIT_1211_Flow
     flujos_todos: [LIT_1011_Flow, LIT_1111_Flow, LIT_1211_Flow]
-    presion_cama: {tag: TH003_PLC_BEDM, completar: true}
-    torque: {tag: TH003_PLC_TORK, completar: true}
-    nivel_interfaz: {tag: TH003_PLC_LVL, completar: true}
-    nivel_cajon: {tag: LIT_1211, completar: true}
-    valvula_alim: {tag: FV_1201, completar: true}
-    floculante: FIT_104
-    agua_dilucion: FIT_101
+    presion_cama: TH003_PLC_BEDM
+    torque: TH003_PLC_TORK
+    nivel_interfaz: TH003_PLC_LVL
+    nivel_cajon: LIT_1211
+    valvula_alim: FV_1003
+    floculante: FIT_106       # dedicado E3 (antes apuntaba por error a FIT_104 de E1)
+    agua_dilucion: FIT_103    # dedicado E3 (antes apuntaba por error a FIT_101 de E1)
     trenes:  # del diagrama P&ID: TH-003 descarga por PP011 (principal) y PP012
       - nombre: "TREN 1"
-        descarga: {tag: PP_011A_Speed, completar: true}
-        wt: {tag: WT_164, completar: true}
-        dit: {tag: DIT_164, completar: true}
-        cizalle: {tag: PP_005A_U_Speed, completar: true}
+        descarga: PP_011A_Speed
+        wt: WT_234
+        dit: DIT_234
+        cizalle: PP_005A_U_Speed
       - nombre: "TREN 2"
-        descarga: {tag: PP_012A_Speed, completar: true}
-        wt: {tag: WT_162, completar: true}
-        dit: {tag: DIT_162, completar: true}
-        cizalle: {tag: PP_006A_U_Speed, completar: true}
+        descarga: PP_012A_Speed
+        wt: WT_236
+        dit: DIT_236
+        cizalle: PP_006A_U_Speed
 
 # ------------------------------------------------------------------------------
 # Dominio: piscinas de recuperación de agua (src/espesadores/dominio/piscinas.py)
@@ -190,6 +228,11 @@ espesadores:
 # confirmada por el usuario: si ambos son parecidos, el valor es válido tal
 # cual; si difieren mucho, vale el mayor (ver conf/base/reglas_operativas.yaml
 # para el umbral y los horarios de cambio de guardia).
+#
+# CONFIRMADO POR EL USUARIO (2026-09-15): el nivel de estas dos piscinas es
+# el INSIGHT PRINCIPAL del proyecto — el indicador más directo de la
+# recuperación de agua. FIT_114 (flujo hacia estas piscinas desde los
+# tanques temporales) es a lo sumo un indicador indirecto/secundario.
 piscinas:
   transmisor_a: LIT_106   # Piscina 1 (296300XC001)
   transmisor_b: LIT_107   # Piscina 2 (296300XC002)
@@ -222,17 +265,20 @@ no_asignados:
   - tag: FIT_114
     descriptor: "Flujo hacia Piscinas"
     unidad: m3/h
+    nota: "indicador INDIRECTO de recuperación de agua (confirmado por el usuario, 2026-09-15): sube cuando LIT_108/LIT_109 suben y el sistema arranca automáticamente más bombas hacia las piscinas. No es rebose directo — es un efecto secundario de los tanques temporales llenándose."
   - tag: LIT_106
     descriptor: "Nivel agua recup. 296300XC001 — Piscina 1"
     unidad: "%"
-    nota: "asignado como dominio_piscinas.transmisor_a; queda listado aquí también por trazabilidad"
+    nota: "asignado como dominio_piscinas.transmisor_a; queda listado aquí también por trazabilidad. Confirmado por el usuario (2026-09-15) como el INSIGHT PRINCIPAL del proyecto, junto con LIT_107."
   - tag: LIT_107
     descriptor: "Nivel agua recup. 296300XC002 — Piscina 2"
     unidad: "%"
-    nota: "asignado como dominio_piscinas.transmisor_b; queda listado aquí también por trazabilidad"
+    nota: "asignado como dominio_piscinas.transmisor_b; queda listado aquí también por trazabilidad. Confirmado por el usuario (2026-09-15) como el INSIGHT PRINCIPAL del proyecto, junto con LIT_106."
   - tag: LIT_108
     descriptor: "Nivel 294300TK001 — Recuperación de Agua Espesadores Relaves"
     unidad: "%"
+    nota: "al subir, arranca automáticamente más bombeo hacia piscinas — sube FIT_114 (confirmado por el usuario, 2026-09-15)."
   - tag: LIT_109
     descriptor: "Nivel 294300TK002 — Recuperación de Agua Espesadores Relaves"
     unidad: "%"
+    nota: "al subir, arranca automáticamente más bombeo hacia piscinas — sube FIT_114 (confirmado por el usuario, 2026-09-15)."

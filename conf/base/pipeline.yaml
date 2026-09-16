@@ -22,11 +22,16 @@ cv_estado_estacionario: 0.05
 
 rutas:
   # Regla de vigencia (conf/base/extraccion.yaml): manda el timestamp del
-  # nombre del archivo. Reemplaza a espesadores_20260906_1317.parquet
-  # (borrado en la limpieza de datos del 2026-09-06 al reiniciar la
-  # extracción desde cero) por la reextracción de los mismos 68 tags,
-  # 780 días, hecha desde la máquina Windows el 2026-09-06/07.
-  entrada: "data/00_raw/datos_espesadores_20260906_1918.parquet"
+  # nombre del archivo. Reemplaza a datos_espesadores_20260906_1918.parquet
+  # (extracción `interpolated` vía AF SDK/pythonnet en Windows, 780 días)
+  # por la reextracción `recorded` (dato crudo archivado, reconstruido a
+  # grilla de 1 min con ZOH para tags step) hecha el 2026-09-15/16 desde
+  # WSL2 vía la pasarela PiGateway (data4cdpv1_local/scripts/pi_tool.py),
+  # en 7 tramos de ~120 días para evitar el OOM de consolidar los ~793 días
+  # completos en memoria de una sola vez. Cubre 2024-07-14 -> 2026-09-15,
+  # 1.142.242 filas x 68 columnas, continuidad de grilla verificada (0
+  # huecos, 0 duplicados en el índice).
+  entrada: "data/00_raw/datos_espesadores_recorded_20260916_0357.parquet"
   roles_guardia:
     - "data/00_raw/rol_operaciones/Rol_Operaciones_2024.md"
     - "data/00_raw/rol_operaciones/Rol_Operaciones_2025.md"

@@ -94,7 +94,7 @@ incompatibilidad conocida pandas 3.0 / pyarrow al escribir.
 ### Configuración de la extracción
 
 - Servidor `tpi.southernperu.com.pe`, zona `America/Lima` (UTC-5 fijo, sin DST).
-- Rango 2024-07-14 a 2026-09-05, intervalo 1 min.
+- Rango 2024-07-14 a 2026-09-15, intervalo 1 min.
 - Bulk vía `PIPointList.InterpolatedValues` con `PIPagingConfiguration`
   (**namespace `OSIsoft.AF.PI`**, no `OSIsoft.AF.Data`).
 - Bloques de 15 días, semiabiertos `[t0, t1)`, con checkpoint en disco,
