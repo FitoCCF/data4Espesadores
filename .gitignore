@@ -29,5 +29,15 @@ data/06_reporting/*
 data/99_deprecated/*
 !data/**/.gitkeep
 !data/**/README.md
-!data/00_raw/rol_operaciones/
-!data/00_raw/rol_operaciones/*.md
+
+# roles de operacion (nombres/turnos de personal): no se versionan por
+# privacidad, aunque el pipeline los lea localmente desde
+# data/00_raw/rol_operaciones/*.md (conf/base/pipeline.yaml::roles_guardia)
+
+# resultado del análisis, visible en GitHub: onepager + reporte de auditoría
+# por espesador (el resto de data/06_reporting/ -- CSVs intermedios,
+# manifiestos -- se sigue generando local y no se versiona)
+!data/06_reporting/TH00*/
+data/06_reporting/TH00*/*
+!data/06_reporting/TH00*/onepager_*.html
+!data/06_reporting/TH00*/REPORTE_COMPLETO.txt

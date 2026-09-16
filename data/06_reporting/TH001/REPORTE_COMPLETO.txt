@@ -1,0 +1,224 @@
+##############################################################################
+# PIPELINE DE ESPESADORES  ·  Espesador de Relaves TH-001  (294100TH001)
+##############################################################################
+
+==============================================================================
+E01 - CARGA Y PERFILADO ESTRUCTURAL
+==============================================================================
+  Archivo: /home/daigo/data4Espesadores/data/00_raw/datos_espesadores_recorded_20260916_0357.parquet
+  Dimensiones crudas: 1,142,242 filas x 68 columnas
+  Rango temporal: 2024-07-14 00:00:00-05:00  ->  2026-09-15 05:21:00-05:00
+  Periodo de muestreo detectado: 60 s (1.0 min)
+  Ventanas en muestras: {'congelamiento': 30, 'hampel': 21, 'estado_estacionario': 60, 'agregacion_mineral': 60}
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E01_perfil_estructural.csv
+
+==============================================================================
+E02 - DIAGNOSTICO DE VARIABLES INSERVIBLES
+==============================================================================
+  (a) Deteccion de holds (un valor domina la serie)
+      Ratio_concentracion_Output     unicos=     57  top1= 20.5%  -> DESCARTADA
+      ALIM_RO_PROM_SC                unicos= 17,704  top1= 37.5%  -> SIRVE
+      Ratio_Con_Cu                   unicos= 42,337  top1= 12.1%  -> SIRVE
+  (b) Columnas 100% nulas
+      Sol_Overflow_Output            100% nula -> DESCARTADA
+  (c) ¿Son independientes %solidos y densidad de descarga?
+      TREN 1: SG implicita mediana=2.7700 CV=1.28%  -> LIGADAS (SG fijo)
+      TREN 2: SG implicita mediana=2.7699 CV=1.26%  -> LIGADAS (SG fijo)
+  RESUMEN: 2 variables descartadas: ['Ratio_concentracion_Output', 'Sol_Overflow_Output']
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E02_diagnostico_variables.csv
+
+==============================================================================
+E03 - LIMPIEZA
+==============================================================================
+  Paso 1 - Validacion de rango fisico (anula celdas fuera de rango)
+      celdas anuladas por rango fisico: 20,177
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E03a_rango_fisico.csv
+  Paso 2 - Filtro de planta produciendo
+      1,142,242 -> 1,027,877 filas  (elimina 114,365 de molino detenido)
+  Paso 3 - Atipicos robustos (mediana movil + MAD)
+      atipicos anulados: 740,177
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E03b_hampel.csv
+
+==============================================================================
+E04 - TRENES DE BOMBEO (DUTY / STANDBY)
+==============================================================================
+  TREN 2    :   710,945 filas ( 69.2% del tiempo)
+  TREN 1    :   316,199 filas ( 30.8% del tiempo)
+  NINGUNO   :       733 filas (  0.1% del tiempo)
+  Verificacion de acoplamiento descarga/cizalle:
+      TREN 1: cizalle PP_001A_U_Speed activo el 100.0% -> ACOPLADO
+      TREN 2: cizalle PP_002A_U_Speed activo el 99.9% -> ACOPLADO
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E04_trenes.csv
+  Filas con descarga en servicio: 1,027,144
+
+==============================================================================
+E05 - BALANCE DE AGUA Y RECUPERACION
+==============================================================================
+  %solidos alimentacion: valor por defecto 36.0% (tag no disponible, igual que en la logica del DCS)
+  Balance coherente: 1,027,144 -> 910,806 filas
+  Rebose      : mediana=475 m3/h  p10=318  p90=600
+  Recuperacion: mediana=65.3%  p10=62.2%  p90=69.1%
+  Control de normalizacion:
+      corr(rebose, tonelaje)       = +0.981   (alto: arrastra la produccion)
+      corr(recuperacion, tonelaje) = -0.243   (bajo: sirve para comparar)
+  Agua de alimentacion de referencia: 725 m3/h
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E05_balance_agua.csv
+
+==============================================================================
+E06 - ESTADO ESTACIONARIO
+==============================================================================
+  Alim_Total_PB01          estable en   786,794 filas ( 86.4%)
+  LIT_1011_Flow            estable en   503,325 filas ( 55.3%)
+  Estable simultaneamente: 910,806 -> 455,536 filas (39.9% del crudo original)
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E06_retencion.csv
+
+==============================================================================
+E07 - VALIDACION DE LA PALANCA PRINCIPAL (control de calidad)
+==============================================================================
+  Correlacion bruta   (wt_activo vs rebose)              = +0.274
+  Correlacion parcial (wt_activo vs rebose | tonelaje)   = +0.942
+  La parcial debe ser claramente mayor: el tonelaje enmascara la palanca.
+
+  banda           ton        n  pend.empirica  pend.teorica   desvio
+  muy bajo        296   91,108          12.58          8.29   +51.8%
+  bajo            362   91,107          10.38          9.96    +4.2%
+  medio           391   91,107          10.58         10.75    -1.6%
+  alto            424   91,107          11.46         11.69    -1.9%
+  muy alto        515   91,107          12.01         14.20   -15.4%
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E07_validacion_palanca.csv
+
+  VEREDICTO: 4 de 5 bandas con desvio menor a 30%.
+  -> VALIDACION SUPERADA: el balance y la limpieza son consistentes.
+  Sensibilidad en el punto de operacion (ton=398, wt=60.2%): 11.0 m3/h por punto de %solidos
+
+==============================================================================
+E08 - TIPOS DE MINERAL (no supervisado)
+==============================================================================
+  Firma de mineral (exogena): ['ALIM_RO_PROM_SC', 'Ratio_Con_Cu']
+  Ventanas de 60min: 6,450
+
+   k  algoritmo   silueta  davies-b  calinski  grupo mayor
+   2     KMeans     0.668     0.543      9193        80.3%
+   2        GMM     0.663     0.505      8607        80.9%
+   2       Ward     0.669     0.544      9175        80.3%
+   2      Birch     0.675     0.437      1745        97.9%
+   3     KMeans     0.466     0.727      8090        46.7%
+   3        GMM     0.677     0.418      7867        80.3%
+   3       Ward     0.677     0.418      7867        80.3%
+   3      Birch     0.677     0.418      7867        80.3%
+   4     KMeans     0.499     0.610     10922        46.5%
+   4        GMM     0.301     1.135      6437        43.8%
+   4       Ward     0.496     0.585     10136        59.3%
+   4      Birch     0.669     0.354      5277        80.3%
+   5     KMeans     0.431     0.727     10672        34.4%
+   5        GMM     0.308     1.019      7161        40.4%
+   5       Ward     0.404     0.771      9896        37.1%
+   5      Birch     0.486     0.469      6880        66.2%
+   6     KMeans     0.430     0.693     11067        34.2%
+   6        GMM     0.306     0.935      6979        40.6%
+   6       Ward     0.405     0.729     10178        37.1%
+   6      Birch     0.477     0.437      5680        66.2%
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E08a_comparacion_algoritmos.csv
+
+  Estabilidad (indice de Rand ajustado sobre remuestreos; 1.0 = estable)
+      k=2: ARI = 0.999 +/- 0.001
+      k=3: ARI = 0.949 +/- 0.145
+      k=4: ARI = 0.989 +/- 0.006
+      k=5: ARI = 0.965 +/- 0.031
+      k=6: ARI = 0.972 +/- 0.024
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E08b_estabilidad.csv
+
+  CONTROL POSITIVO (exogenas -> tipo de mineral): AUC = 0.930
+  -> DETECTOR VALIDO
+
+==============================================================================
+E09 - EFECTO DE LAS GUARDIAS
+==============================================================================
+  Rol leido: 7,672 registros, 7 guardias, 2024-01-01 a 2026-12-31
+  Bloques de turno cruzados: 455,536 filas
+  Bloques agregados: 1,439
+
+  setpoint              efecto real  nulo medio   p-valor
+  FIT_104                    0.0034      0.0025     0.205  no
+  FV_1001                    0.0038      0.0043     0.505  no
+  TH001_PLC_LVL              0.0194      0.0030     0.000  SI
+  vel_descarga               0.0114      0.0042     0.025  SI
+  vel_cizalle                0.0093      0.0048     0.055  no
+
+  Comparacion sobre los mismos bloques (guardia vs mineral):
+  setpoint                guardia    mineral   quien pesa mas
+  FIT_104                  0.0034     0.0041          similar
+  FV_1001                  0.0038     0.0059          mineral
+  TH001_PLC_LVL            0.0194     0.0112          guardia
+  vel_descarga             0.0114     0.0026          guardia
+  vel_cizalle              0.0093     0.0005          guardia
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E09a_guardias_vs_nulo.csv
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E09b_guardia_vs_mineral.csv
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E09c_desempeno_por_guardia.csv
+  Rango entre guardias: 0.41 puntos de %solidos (5 m3/h)
+
+==============================================================================
+E10 - VENTANAS OPERATIVAS OPTIMAS
+==============================================================================
+  --- Tipo de mineral 0: n=141,095 (31% del tiempo) ---
+      recuperacion ALTA=68.0%  BAJA=62.8%  brecha=5.3 puntos
+      tonelaje ALTA=371  BAJA=430 t/h  (si difieren, el rebose absoluto NO es comparable)
+      ganancia a tonelaje constante: +39 m3/h (agua alim ref = 752 m3/h)
+  --- Tipo de mineral 1: n=87,709 (19% del tiempo) ---
+      recuperacion ALTA=68.5%  BAJA=62.5%  brecha=6.0 puntos
+      tonelaje ALTA=384  BAJA=424 t/h  (si difieren, el rebose absoluto NO es comparable)
+      ganancia a tonelaje constante: +45 m3/h (agua alim ref = 759 m3/h)
+  --- Tipo de mineral 2: n=216,794 (48% del tiempo) ---
+      recuperacion ALTA=68.2%  BAJA=62.5%  brecha=5.7 puntos
+      tonelaje ALTA=382  BAJA=408 t/h  (si difieren, el rebose absoluto NO es comparable)
+      ganancia a tonelaje constante: +42 m3/h (agua alim ref = 740 m3/h)
+  --- Tipo de mineral 3: n=9,938 (2% del tiempo) ---
+      recuperacion ALTA=68.4%  BAJA=61.2%  brecha=7.2 puntos
+      tonelaje ALTA=374  BAJA=371 t/h  (si difieren, el rebose absoluto NO es comparable)
+      ganancia a tonelaje constante: +52 m3/h (agua alim ref = 719 m3/h)
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E10a_brecha_por_mineral.csv
+
+  ¿Cambia la ventana optima segun el mineral?
+  parametro                 Tipo 0    Tipo 1    Tipo 2    Tipo 3    rango
+  TH001_PLC_BEDM             60.21     60.53     60.53     60.53     0.32
+  TH001_PLC_TORK             32.66     31.96     32.91     34.42     2.46
+  TH001_PLC_LVL               2.08      2.24      2.11      2.16     0.16
+  LIT_1011_Flow            1456.60   1492.14   1471.90   1535.23    78.63
+  wt_activo                  61.35     61.64     61.65     60.89     0.76
+  vel_descarga               34.99     34.00     34.00     34.99     0.99
+  vel_cizalle                65.00     65.00     65.00     65.00     0.00
+  FIT_104                     0.45      0.45      0.45      0.55     0.10
+  FV_1001                    31.00     31.00     31.00      6.00    25.00
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E10b_regimenes_por_mineral.csv
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E10c_ventana_consolidada.csv
+
+  VENTANA CONSOLIDADA (aplicable a todo tipo de mineral):
+  parametro                   min  objetivo      max   actual      clase
+  TH001_PLC_BEDM            54.50     60.53    63.55    59.30   objetivo
+  TH001_PLC_TORK            25.85     32.78    37.45    31.21   objetivo
+  TH001_PLC_LVL              1.54      2.13     3.62     2.17   objetivo
+  LIT_1011_Flow           1154.82   1482.02  1844.64  1473.68   objetivo
+  wt_activo                 60.60     61.50    64.50    60.01   objetivo
+  vel_descarga              28.00     34.50    40.00    34.00      bomba
+  vel_cizalle               59.99     65.00    65.50    65.00      bomba
+  FIT_104                    0.27      0.45     0.80     0.40 sin_efecto
+  FV_1001                    6.35     31.00    44.00    31.00 sin_efecto
+
+==============================================================================
+E11 - COMPARACION DE TRENES DE BOMBEO
+==============================================================================
+  tren                 n  %tiempo  %solidos  recuperacion   rebose  tonelaje
+  TREN 2         308,991    67.8%     60.63         66.0%      495       393
+  TREN 1         146,545    32.2%     59.16         63.8%      495       408
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E11a_trenes_crudo.csv
+
+  Emparejado por presion de cama, nivel de interfaz y tonelaje:
+      celdas comparables: 35
+      gana TREN 2: 35 de 35 celdas
+      diferencia media emparejada: 1.60 puntos de %solidos (18 m3/h)
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E11b_trenes_emparejado.csv
+
+  Consistencia de la bomba de cizallamiento por tren:
+      TREN 2: mediana=65.0  p10=60.0  por debajo del objetivo el 11% del tiempo
+      TREN 1: mediana=65.0  p10=60.0  por debajo del objetivo el 6% del tiempo
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E11c_cizalle.csv
