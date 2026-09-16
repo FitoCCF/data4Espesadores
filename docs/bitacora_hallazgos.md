@@ -41,6 +41,9 @@ partir de N-8 el dataset canónico es
 | N-9 | El mapeo de roles de TH-002/TH-003 en `tags.yaml` (`completar: true`) apuntaba a tags inventados que no existen en PI | CONFIRMADO | **Corregido** — reemplazados por los tags reales ya validados en `extraccion_pi` |
 | N-10 | El rango real de historia en PI llega a 2022-12-30 (1354 días), más que los 780 días asumidos en `extraccion.yaml` | CONFIRMADO | Abierto — la re-extracción de esta sesión usó 2024-07-14 por continuidad con la corrida anterior, no el máximo disponible |
 | N-11 | Pipeline E01-E11 re-corrido para TH-001/002/003 contra el dataset `recorded` | CONFIRMADO | **Hecho**, sin errores — ver cifras nuevas abajo |
+| N-12 | Tras una parada de molienda (total o parcial), la válvula de alimentación se abre MÁS de lo normal y el flujo entra MÁS alto — no hay firma de atoro que deje el flujo bajo | CONFIRMADO (análisis por episodios, 130 paradas totales + 198 parciales, los 3 espesadores) | Hipótesis del usuario no confirmada en su forma original; señal tenue solo en parada parcial |
+| N-13 | Cuando la piscina cruza bajo 75% (R1), la velocidad de descarga está ELEVADA y baja gradualmente a lo normal en ~2 h — nunca por debajo de lo normal | CONFIRMADO (780 episodios, los 3 espesadores) | Hipótesis "piscina baja → se baja la descarga" solo se ve como corrección lenta de vuelta a lo normal |
+| N-14 | C2 tiene solo dos molinos en PI (PB01, PB02); no existe PB03 | CONFIRMADO (búsqueda en PI 2026-09-16) | `tags.yaml::globales.molinos` |
 
 ---
 
@@ -522,6 +525,109 @@ grilla de 1 min (N-8), distinto en método de extracción del dataset
 número-a-número entre ambos métodos en esta sesión — pendiente si se quiere
 cuantificar cuánto cambia el resultado por el método de extracción en sí
 (más allá del rango temporal, que es prácticamente el mismo).
+
+---
+
+## N-12. Tras una parada de molienda, la válvula se abre MÁS, no menos — CONFIRMADO
+
+**Hipótesis del usuario (2026-09-16):** un corte aguas arriba (cortocircuito
+de ciclón, parada de un equipo de molienda) apelmaza mineral grueso en la
+válvula de ingreso; el flujo de alimentación cae y sigue pareciendo bajo
+aun después de que la molienda se normaliza; el operador compensa abriendo
+la válvula.
+
+**Método:** `src/espesadores/dominio/atoro_alimentacion.py` — análisis de
+épocas superpuestas sobre el dataset crudo (antes del filtro de E03, que
+elimina justamente las filas de parada). Dos tipos de evento, a pedido del
+usuario, usando los dos molinos (`tags.yaml::globales.molinos`, ver N-14):
+*parada total* (PB01+PB02 ≤ 100 t/h) y *parada parcial* (un molino ≤ 100
+mientras el otro sigue). Solo episodios de 10-240 min (excluye paradas de
+planta de días, cuya recuperación no es comparable). Mediana de cada
+variable en bins de 15 min desde t=0 = la molienda vuelve, contra un
+período de referencia a ≥ 4 h de cualquier evento.
+
+**Resultado (los tres espesadores, mismo patrón):**
+
+| | Válvula normal | Válvula en t=0 (total / parcial) | Flujo normal | Flujo en t=0 (total / parcial) |
+|---|---:|---:|---:|---:|
+| TH-001 | 31 | 34 / **39** | 1457 | 1609 / 1693 |
+| TH-002 | 33 | 43 / **48** | 2087 | 2370 / 2447 |
+| TH-003 | 44 | 49 / 48 | 1699 | 1858 / 1977 |
+
+En t=0 la válvula está **más abierta** y el flujo entra **más alto** que en
+operación normal; ambos decaen hacia el valor normal en 2-3 h mientras los
+molinos suben de ~50-75% a ~95% de su tonelaje normal. La partición (share
+de este espesador sobre los tres) se mantiene casi constante. **No aparece
+la firma de atoro** (flujo bajo persistente + válvula compensando después).
+
+**Señal tenue, solo en parada parcial:** entre los minutos ~60 y ~135 la
+válvula sigue en 34-48 (arriba de lo normal) mientras el flujo queda 2-3%
+por debajo de lo normal. Es compatible con una restricción leve, pero el
+flujo en ese tramo sigue estando por encima de lo que predice el tonelaje
+reducido de los molinos, así que no alcanza para afirmar un atoro.
+
+**Lectura operativa:** al reiniciar, la válvula se abre de más (a propósito
+o por lógica de control) y se acomoda sola. Si el atoro existe, es más
+corto que la resolución de este análisis o requiere un tag específico del
+ciclón (no hay ninguno en `tags.yaml`; no hay sensor de "material
+atorado").
+
+**Salidas:** `data/01_interim/atoro_{parada_total,parada_parcial}_TH00X_{perfil,episodios}.csv`.
+
+---
+
+## N-13. Piscina baja: la descarga está elevada y baja lentamente a lo normal — CONFIRMADO
+
+**Hipótesis del usuario (2026-09-16):** si la piscina está baja, se baja
+la velocidad de la bomba de descarga a propósito (que el espesador no
+descargue) para favorecer el rebose.
+
+**Método:** `src/espesadores/dominio/piscina_episodios.py` — episodios con
+el nivel derivado (`dominio/piscinas.py`) bajo el mínimo de R1 (75%,
+`reglas_operativas.yaml`) durante ≥ 30 min (`episodio_minimo_reportable_min`),
+alineados en t=0 = primer minuto bajo 75%, siguiendo `vel_descarga` (señal
+activa, misma regla que E04) 120 min, contra referencia con piscina sana
+(≥ 90%, R2). Complementa la comparación por terciles de E10, que había
+dado lo contrario a la hipótesis.
+
+**Resultado (780 episodios, mediana 4,4 h bajo 75%; la piscina está bajo
+75% el 19,5% del tiempo):**
+
+| | Descarga con piscina sana | Descarga en t=0 (cruce bajo 75%) | A los 120 min |
+|---|---:|---:|---:|
+| TH-001 | 33,0 | **36,0** | 33,0 |
+| TH-002 | 21,8 | **25,1** | 22,1 |
+| TH-003 | 22,1 | **26,1** | 22,0 |
+
+Cuando la piscina cruza bajo 75%, la descarga está **más alta** que con la
+piscina sana, y baja gradualmente hasta el valor normal en ~2 h — **nunca
+por debajo de lo normal**. La piscina sigue cayendo en esa ventana (74% →
+68%).
+
+**Lectura:** la hipótesis solo se ve como una *corrección lenta de vuelta
+a lo normal*, no como una reducción deliberada por debajo de lo normal. La
+secuencia es coherente con la física (más descarga → menos rebose → la
+piscina baja → el operador reduce la descarga, despacio). La forma fuerte
+de la hipótesis ("se hace que el espesador no descargue") no aparece en
+780 episodios.
+
+**Salidas:** `data/01_interim/piscina_baja_TH00X_{perfil,episodios}.csv`.
+
+---
+
+## N-14. Solo existen dos molinos en PI — CONFIRMADO
+
+El usuario pidió considerar `Alim_Total_PB01`, `PB02` y `PB03`. Búsqueda en
+PI (`pi_tool.py buscar`, patrones `*Alim_Total_PB*`, `*PB03*`, `*PB003*`,
+`*Molino_3*`, `*ML003*`): solo existen PB01 y PB02 (con sus derivados
+`_PROYD/_PROYT/_TMS_*/_TOTD/_TOTT`, que son totalizadores por día/turno,
+no tonelaje instantáneo). Ambos ya estaban en `extraccion_pi`. Se agregó
+`tags.yaml::globales.molinos: [Alim_Total_PB01, Alim_Total_PB02]` para que
+los análisis por episodios usen los dos sin hardcodearlos.
+
+**Nota:** el filtro "planta produciendo" de E03 sigue usando solo
+`alim_total_molino` (PB01). No se cambió en esta sesión — cambiarlo altera
+todas las cifras de E01-E11 y es una decisión de alcance.
 
 ---
 

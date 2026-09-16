@@ -141,6 +141,11 @@ tags_digitales: [YY_4100TH001, YY_4100TH002, YY_4100TH003]
 
 globales:
   alim_total_molino: Alim_Total_PB01      # Tonelaje total alimentado al molino
+  # Todos los molinos de C2 (verificado en PI 2026-09-16: solo existen
+  # PB01 y PB02, no hay PB03 bajo ningún patrón). Los usa
+  # dominio/atoro_alimentacion.py para distinguir parada TOTAL (ambos bajos)
+  # de parada PARCIAL (uno cae, el otro sigue produciendo).
+  molinos: [Alim_Total_PB01, Alim_Total_PB02]
   ley_rougher: ALIM_RO_PROM_SC             # proxy de mineral, exógeno
   ratio_cu: Ratio_Con_Cu                   # proxy de mineral, exógeno
   ratio_conc_reporte: Ratio_concentracion_Output  # INSERVIBLE en TH-001 (86% hold) — E02 lo reconfirma
