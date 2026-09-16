@@ -152,6 +152,8 @@ E09 - EFECTO DE LAS GUARDIAS
   TH002_PLC_LVL            0.0128     0.0079          guardia
   vel_descarga             0.0042     0.0051          similar
   vel_cizalle              0.0117     0.0024          guardia
+  wt_activo                0.0062     0.0187          mineral
+  recuperacion             0.0063     0.0165          mineral
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH002/E09a_guardias_vs_nulo.csv
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH002/E09b_guardia_vs_mineral.csv
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH002/E09c_desempeno_por_guardia.csv
@@ -190,6 +192,20 @@ E10 - VENTANAS OPERATIVAS OPTIMAS
   FIT_105                     0.46      0.45      0.45      0.58     0.13
   FV_1002                    37.00     37.00     39.00     42.00     5.00
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH002/E10b_regimenes_por_mineral.csv
+
+  ¿La valvula de alimentacion es realmente una variable objetivo?
+  (mediana del tercio ALTA vs BAJA de recuperacion, prueba por permutacion)
+  variable                mediana ALTA  mediana BAJA   p-valor    veredicto
+  FV_1002                         38.0          33.0       0.0 PROMOVIDA a objetivo
+  FIT_105                        0.457           0.4       0.0 PROMOVIDA a objetivo
+  TH002_PLC_BEDM                61.741         60.53       0.0 confirma objetivo
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH002/E10d_prueba_variables_candidatas.csv
+
+  Metricas secundarias de recuperacion (nivel de piscina y FIT_114)
+  AVISO: la piscina y FIT_114 son de planta, compartidos por los 3 espesadores.
+  nivel_piscina (LIT_106/107)  ALTA=89.399%  BAJA=89.69%  p=0.0  relevante=False
+  FIT_114 (flujo hacia piscinas) ALTA=1918.776  BAJA=1922.061  p=0.197  relevante=False
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH002/E10e_metricas_secundarias_recuperacion.csv
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH002/E10c_ventana_consolidada.csv
 
   VENTANA CONSOLIDADA (aplicable a todo tipo de mineral):
@@ -201,8 +217,8 @@ E10 - VENTANAS OPERATIVAS OPTIMAS
   wt_activo                 62.82     63.51    64.86    61.27   objetivo
   vel_descarga              18.96     21.98    29.99    22.00      bomba
   vel_cizalle               30.00     45.00    65.00    46.23      bomba
-  FIT_105                    0.28      0.46     0.85     0.43 sin_efecto
-  FV_1002                   11.50     38.00    74.72    36.00 sin_efecto
+  FIT_105                    0.28      0.46     0.85     0.43   objetivo
+  FV_1002                   11.50     38.00    74.72    36.00   objetivo
 
 ==============================================================================
 E11 - COMPARACION DE TRENES DE BOMBEO

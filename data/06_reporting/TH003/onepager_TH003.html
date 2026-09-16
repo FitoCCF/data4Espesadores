@@ -71,6 +71,8 @@ font-size:11px;color:var(--steel);line-height:1.5}
 .no{display:flex;gap:11px;padding:8px 0;border-bottom:1px dotted var(--hair)}
 .no:last-child{border-bottom:none}
 .nox{font-family:var(--mono);font-size:13px;color:var(--alarm);font-weight:600}
+.nox.ok{color:var(--band)}
+.nox.warn{color:var(--amber)}
 .no h3{font-family:var(--mono);font-size:10.5px;font-weight:600;margin-bottom:1px}
 .no p{font-size:10.5px;color:var(--steel);line-height:1.42}
 table.tr{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px;margin-top:4px}
@@ -188,6 +190,7 @@ position:relative;list-style:none}
         <b class="">63.81</b><br><s>hoy 60.32</s>
         <span class="arrow">SUBIR ↑</span></div>
     </div>
+  <div class='note' style='margin-top:4px'>Presión de cama validada con la misma prueba: 56.898 en el tercio de mejor recuperación vs 55.97 en el peor (p=0.0, diferencia relevante).</div>
 </section>
 
 <section class="sec" style="border-top:1px solid var(--hair);margin-top:8px">
@@ -244,12 +247,31 @@ position:relative;list-style:none}
   <div class="col">
     <div class="sech"><h2>4 · Sin efecto comprobado</h2>
       <span class="chip no">No usar como variable de ajuste</span></div>
-    <div class='no'><div class='nox'>✕</div><div><h3>Floculante · FIT_106</h3><p>El valor es prácticamente el mismo en la operación de alta y de baja recuperación. No sirve como variable de ajuste para recuperar más agua.</p></div></div><div class='no'><div class='nox'>✕</div><div><h3>Válvula de alimentación · FV_1003</h3><p>El valor es prácticamente el mismo en la operación de alta y de baja recuperación. No sirve como variable de ajuste para recuperar más agua.</p></div></div><div class='no'><div class='nox'>✕</div><div><h3>Receta distinta por tipo de mineral</h3><p>Se detectaron 4 tipos de mineral. La ventana óptima casi no cambia entre ellos, por lo que <b>una sola ventana sirve para todo el mineral</b>.</p></div></div><div class='no'><div class='nox'>✕</div><div><h3>Diferencias entre guardias</h3><p>La brecha entre la mejor y la peor guardia es 0.75 puntos de % sólidos ≈ 9 m³/h, muy por debajo de la oportunidad de estandarizar.</p></div></div>
+    <div class='no'><div class='nox'>✕</div><div><h3>Floculante · FIT_106</h3><p>Probado: mediana 0.4 en el tercio de mejor recuperación vs 0.395 en el peor. Hay diferencia estadísticamente significativa (p=0.0) pero de magnitud mínima (0.005, &lt;3% del rango operativo) — con 370,850 registros hasta el ruido da p bajo. No es una diferencia operativamente útil. No sirve como variable de ajuste para recuperar más agua.</p></div></div><div class='no'><div class='nox'>✕</div><div><h3>Válvula de alimentación · FV_1003</h3><p>Probado: mediana 44.174 en el tercio de mejor recuperación vs 44.0 en el peor. Hay diferencia estadísticamente significativa (p=0.0) pero de magnitud mínima (0.174, &lt;3% del rango operativo) — con 393,309 registros hasta el ruido da p bajo. No es una diferencia operativamente útil. No sirve como variable de ajuste para recuperar más agua.</p></div></div><div class='no'><div class='nox'>✕</div><div><h3>Receta distinta por tipo de mineral</h3><p>Se detectaron 4 tipos de mineral. La ventana óptima casi no cambia entre ellos, por lo que <b>una sola ventana sirve para todo el mineral</b>.</p></div></div><div class='no'><div class='nox'>✕</div><div><h3>Diferencias entre guardias</h3><p>La brecha entre la mejor y la peor guardia es 0.75 puntos de % sólidos ≈ 9 m³/h, muy por debajo de la oportunidad de estandarizar.</p></div></div>
     <div class="note" style="margin-top:11px">
       <b>Dónde está realmente la oportunidad:</b> la brecha de recuperación aparece
       <b>dentro</b> de cada tipo de mineral y <b>dentro</b> de cada guardia. No la causa el
       mineral ni el equipo humano: es ajuste turno a turno sin criterio común. Es
       exactamente lo que un sistema experto elimina.</div>
+  </div>
+</div>
+
+<div class="cols">
+  <div class="col">
+    
+        <div class="sech"><h2>5 · Métricas secundarias de recuperación</h2></div>
+        <p style="font-size:10.5px;color:var(--steel);margin:2px 0 6px">Piscina y FIT_114 son
+        de <b>planta</b> (reciben rebose de los tres espesadores más agua externa) — un
+        resultado aquí corrobora la señal de este espesador, no se le atribuye en exclusiva.</p>
+        <div class='no'><div class='nox '>○</div><div><h3>Nivel de piscina (LIT_106/LIT_107)</h3><p>91.136% en el tercio de mejor recuperación de este espesador vs 90.652% en el peor (p=0.0, n=197101+197102). No muestra diferencia significativa en esta ventana.</p></div></div><div class='no'><div class='nox warn'>⚠</div><div><h3>Flujo hacia piscinas (FIT_114)</h3><p>1866.15 en el tercio de mejor recuperación de este espesador vs 1921.259 en el peor (p=0.0, n=197101+197102). Diferencia significativa, pero en dirección <b>contraria</b> a la esperada — no se descarta, pero no corrobora la hipótesis tal cual. Puede deberse a los otros dos espesadores o a los flujos externos de la piscina (FIT_123/FIT_601). Revisar antes de citarla.</p></div></div>
+  </div>
+  <div class="col">
+    
+            <div class="sech"><h2>6 · ¿Manda el mineral o la guardia?</h2></div>
+            <p style="font-size:10.5px;color:var(--steel);margin:2px 0 4px">Fracción de la
+            varianza del resultado (η²) que explica cada factor, sobre los mismos bloques de
+            turno.</p>
+            <div class='note go' style='margin:6px 0 0'><b>% sólidos de descarga:</b> El <b>mineral</b> es la explicación principal, no queda solapado por la guardia. (η² mineral=0.021 · η² guardia=0.006, mismos bloques de turno).</div><div class='note go' style='margin:6px 0 0'><b>Recuperación de agua:</b> El <b>mineral</b> es la explicación principal, no queda solapado por la guardia. (η² mineral=0.020 · η² guardia=0.006, mismos bloques de turno).</div>
   </div>
 </div>
 

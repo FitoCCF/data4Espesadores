@@ -159,13 +159,51 @@ def generar_onepager(ctx, archivo=None):
         nota_ciz = (f"<div class='note warn'><b>El cizallamiento sí es objetivo, no medio.</b> "
                     f"Debe quedar fijo, sin variación. Situación actual: {detalle}.</div>")
 
-    # --- Bloque de variables sin efecto ---
+    # --- Evidencia de las pruebas candidato (E10): la válvula y el
+    # floculante ya no se marcan sin_efecto por supuesto, se prueban contra
+    # el tercio ALTA/BAJA de recuperación. La presión de cama (ya objetivo)
+    # se valida con la misma prueba. ---
+    prueba_cand = ctx.get("prueba_candidatos", {})
+    promovidos = ctx.get("candidatos_promovidos", set())
+    nota_promovidos = ""
+    filas_promovidas = [c for c in promovidos]
+    if filas_promovidas:
+        detalle = " · ".join(
+            f"{c}: {prueba_cand[c]['mediana_a']} en ALTA vs {prueba_cand[c]['mediana_b']} en "
+            f"BAJA (p={prueba_cand[c]['p_valor']})" for c in filas_promovidas)
+        nota_promovidos = (f"<div class='note go'><b>Se evaluó con datos, no se asumió:</b> "
+                            f"{detalle}. La diferencia es estadísticamente significativa y de "
+                            f"magnitud relevante (≥3% del rango operativo), así que se promovió "
+                            f"a variable objetivo — antes se descartaba sin probarla.</div>")
+    presion_cama_tag = cfg.get("presion_cama")
+    if presion_cama_tag in prueba_cand:
+        rp = prueba_cand[presion_cama_tag]
+        nota_promovidos += (f"<div class='note' style='margin-top:4px'>Presión de cama "
+                            f"validada con la misma prueba: {rp['mediana_a']} en el tercio de "
+                            f"mejor recuperación vs {rp['mediana_b']} en el peor "
+                            f"(p={rp['p_valor']}, "
+                            f"{'diferencia relevante' if rp['relevante'] else 'sin diferencia relevante a pesar de tratarse como objetivo'}).</div>")
+
+    # --- Bloque de variables sin efecto (ahora con evidencia cuando existe) ---
     sin_html = ""
     for tag, etq, r in filas_sin:
+        if tag in prueba_cand:
+            rc = prueba_cand[tag]
+            if rc.get("significativo") and not rc.get("relevante"):
+                razon = (f"Hay diferencia estadísticamente significativa (p={rc['p_valor']}) "
+                         f"pero de magnitud mínima ({rc['diferencia']}, &lt;3% del rango "
+                         f"operativo) — con {rc['n_a']+rc['n_b']:,} registros hasta el ruido "
+                         f"da p bajo. No es una diferencia operativamente útil.")
+            else:
+                razon = f"No hay diferencia estadísticamente significativa (p={rc['p_valor']})."
+            texto = (f"Probado: mediana {rc['mediana_a']} en el tercio de mejor recuperación "
+                     f"vs {rc['mediana_b']} en el peor. {razon} No sirve como "
+                     f"variable de ajuste para recuperar más agua.")
+        else:
+            texto = ("El valor es prácticamente el mismo en la operación de alta y de baja "
+                     "recuperación. No sirve como variable de ajuste para recuperar más agua.")
         sin_html += (f"<div class='no'><div class='nox'>✕</div><div>"
-                     f"<h3>{etq} · {tag}</h3><p>El valor es prácticamente el mismo en la "
-                     f"operación de alta y de baja recuperación. No sirve como variable de "
-                     f"ajuste para recuperar más agua.</p></div></div>")
+                     f"<h3>{etq} · {tag}</h3><p>{texto}</p></div></div>")
     if ctx.get("mineral_ok"):
         n_tipos = len(ctx.get("ventanas_por_mineral", {}))
         sin_html += (f"<div class='no'><div class='nox'>✕</div><div>"
@@ -179,6 +217,72 @@ def generar_onepager(ctx, archivo=None):
                      f"guardia es {ctx.get('rango_guardias', 0):.2f} puntos de % sólidos ≈ "
                      f"{sens*ctx.get('rango_guardias', 0):.0f} m³/h, muy por debajo de la "
                      f"oportunidad de estandarizar.</p></div></div>")
+
+    # --- Métricas secundarias de recuperación: nivel de piscina y FIT_114 ---
+    metsec = ctx.get("metricas_secundarias", {})
+    metsec_items = ""
+    _etq_ms = {"nivel_piscina": ("Nivel de piscina (LIT_106/LIT_107)", "%"),
+               "FIT_114": ("Flujo hacia piscinas (FIT_114)", "")}
+    for clave, (nombre, unidad) in _etq_ms.items():
+        if clave not in metsec:
+            continue
+        r = metsec[clave]
+        # Hipotesis: mas recuperacion -> nivel de piscina y FIT_114 MAS
+        # altos (mas agua llegando). Hay que distinguir "significativo" de
+        # "significativo y en la direccion esperada" — lo contrario es un
+        # hallazgo real (no se descarta), pero no es una confirmacion.
+        favorable = r.get("relevante") and r["mediana_a"] > r["mediana_b"]
+        contrario = r.get("relevante") and r["mediana_a"] <= r["mediana_b"]
+        cls_ok = "ok" if favorable else "warn" if contrario else ""
+        marca = "✓" if favorable else "⚠" if contrario else "○"
+        if favorable:
+            veredicto = "Corrobora la señal de este espesador: sube junto con la recuperación."
+        elif contrario:
+            veredicto = ("Diferencia significativa, pero en dirección <b>contraria</b> a la "
+                         "esperada — no se descarta, pero no corrobora la hipótesis tal cual. "
+                         "Puede deberse a los otros dos espesadores o a los flujos externos "
+                         "de la piscina (FIT_123/FIT_601). Revisar antes de citarla.")
+        else:
+            veredicto = "No muestra diferencia significativa en esta ventana."
+        metsec_items += (f"<div class='no'><div class='nox {cls_ok}'>{marca}</div><div>"
+                         f"<h3>{nombre}</h3><p>{r['mediana_a']}{unidad} en el tercio de mejor "
+                         f"recuperación de este espesador vs {r['mediana_b']}{unidad} en el "
+                         f"peor (p={r['p_valor']}, n={r['n_a']}+{r['n_b']}). {veredicto}</p>"
+                         f"</div></div>")
+    metsec_html = ""
+    if metsec_items:
+        metsec_html = f"""
+        <div class="sech"><h2>5 · Métricas secundarias de recuperación</h2></div>
+        <p style="font-size:10.5px;color:var(--steel);margin:2px 0 6px">Piscina y FIT_114 son
+        de <b>planta</b> (reciben rebose de los tres espesadores más agua externa) — un
+        resultado aquí corrobora la señal de este espesador, no se le atribuye en exclusiva.</p>
+        {metsec_items}"""
+
+    # --- ¿Manda el mineral o la guardia sobre el resultado? ---
+    gm = ctx.get("guardia_vs_mineral")
+    mingua_html = ""
+    if gm is not None and len(gm) and "tipo" in gm.columns:
+        etq_res = {"wt_activo": "% sólidos de descarga", "recuperacion": "Recuperación de agua"}
+        filas_gm = gm[gm["tipo"] == "resultado"]
+        items = ""
+        for idx, r in filas_gm.iterrows():
+            nombre = etq_res.get(idx, idx)
+            if r["domina"] == "mineral":
+                veredicto, cls = "El <b>mineral</b> es la explicación principal, no queda solapado por la guardia.", "go"
+            elif r["domina"] == "guardia":
+                veredicto, cls = "El efecto de <b>guardia</b> pesa más que el mineral: el mineral por sí solo no explica la brecha.", "warn"
+            else:
+                veredicto, cls = "Mineral y guardia pesan parecido — ninguno domina claramente.", ""
+            items += (f"<div class='note {cls}' style='margin:6px 0 0'><b>{nombre}:</b> "
+                     f"{veredicto} (η² mineral={r['eta2_mineral']:.3f} · "
+                     f"η² guardia={r['eta2_guardia']:.3f}, mismos bloques de turno).</div>")
+        if items:
+            mingua_html = f"""
+            <div class="sech"><h2>6 · ¿Manda el mineral o la guardia?</h2></div>
+            <p style="font-size:10.5px;color:var(--steel);margin:2px 0 4px">Fracción de la
+            varianza del resultado (η²) que explica cada factor, sobre los mismos bloques de
+            turno.</p>
+            {items}"""
 
     # --- HTML final ---
     html = f"""<!DOCTYPE html>
@@ -254,6 +358,8 @@ font-size:11px;color:var(--steel);line-height:1.5}}
 .no{{display:flex;gap:11px;padding:8px 0;border-bottom:1px dotted var(--hair)}}
 .no:last-child{{border-bottom:none}}
 .nox{{font-family:var(--mono);font-size:13px;color:var(--alarm);font-weight:600}}
+.nox.ok{{color:var(--band)}}
+.nox.warn{{color:var(--amber)}}
 .no h3{{font-family:var(--mono);font-size:10.5px;font-weight:600;margin-bottom:1px}}
 .no p{{font-size:10.5px;color:var(--steel);line-height:1.42}}
 table.tr{{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px;margin-top:4px}}
@@ -306,6 +412,7 @@ position:relative;list-style:none}}
     <p>Son las que determinan cuánta agua se recupera. Banda verde = rango objetivo ·
     marca negra = valor a apuntar · marca roja = valor promedio actual.</p></div>
   {''.join(filas_obj)}
+  {nota_promovidos}
 </section>
 
 <section class="sec" style="border-top:1px solid var(--hair);margin-top:8px">
@@ -338,6 +445,15 @@ position:relative;list-style:none}}
       <b>dentro</b> de cada tipo de mineral y <b>dentro</b> de cada guardia. No la causa el
       mineral ni el equipo humano: es ajuste turno a turno sin criterio común. Es
       exactamente lo que un sistema experto elimina.</div>
+  </div>
+</div>
+
+<div class="cols">
+  <div class="col">
+    {metsec_html}
+  </div>
+  <div class="col">
+    {mingua_html}
   </div>
 </div>
 

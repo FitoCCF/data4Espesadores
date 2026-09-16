@@ -152,6 +152,8 @@ E09 - EFECTO DE LAS GUARDIAS
   TH003_PLC_LVL            0.0142     0.0034          guardia
   vel_descarga             0.0037     0.0069          mineral
   vel_cizalle              0.0061     0.0009          guardia
+  wt_activo                0.0063     0.0209          mineral
+  recuperacion             0.0062     0.0198          mineral
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH003/E09a_guardias_vs_nulo.csv
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH003/E09b_guardia_vs_mineral.csv
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH003/E09c_desempeno_por_guardia.csv
@@ -190,6 +192,20 @@ E10 - VENTANAS OPERATIVAS OPTIMAS
   FIT_106                     0.40      0.40      0.40      0.55     0.15
   FV_1003                    46.00     46.00     44.00     19.00    27.00
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH003/E10b_regimenes_por_mineral.csv
+
+  ¿La valvula de alimentacion es realmente una variable objetivo?
+  (mediana del tercio ALTA vs BAJA de recuperacion, prueba por permutacion)
+  variable                mediana ALTA  mediana BAJA   p-valor    veredicto
+  FV_1003                       44.174          44.0       0.0 sin efecto (confirmado)
+  FIT_106                          0.4         0.395       0.0 sin efecto (confirmado)
+  TH003_PLC_BEDM                56.898         55.97       0.0 confirma objetivo
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH003/E10d_prueba_variables_candidatas.csv
+
+  Metricas secundarias de recuperacion (nivel de piscina y FIT_114)
+  AVISO: la piscina y FIT_114 son de planta, compartidos por los 3 espesadores.
+  nivel_piscina (LIT_106/107)  ALTA=91.136%  BAJA=90.652%  p=0.0  relevante=False
+  FIT_114 (flujo hacia piscinas) ALTA=1866.15  BAJA=1921.259  p=0.0  relevante=True
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH003/E10e_metricas_secundarias_recuperacion.csv
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH003/E10c_ventana_consolidada.csv
 
   VENTANA CONSOLIDADA (aplicable a todo tipo de mineral):

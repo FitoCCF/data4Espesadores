@@ -112,21 +112,30 @@ def e09_guardias(df, cfg, ctx):
                       "p_valor": round(p, 3), "significativo": sig})
         log(f"  {col:20s} {real:12.4f} {nulos.mean():11.4f} {p:9.3f}  {sig}")
 
+    # Los "resultados" (wt_activo, recuperacion) se comparan aparte de los
+    # "setpoints": no son algo que el operador mueva directamente, son lo que
+    # se quiere explicar. Responde la pregunta del usuario: el cambio de
+    # mineral sobre la recuperacion, ¿es trascendente o queda solapado por el
+    # cambio de guardia?
+    resultados = [c for c in ("wt_activo", "recuperacion") if c in df.columns]
+
     log("")
     log("  Comparacion sobre los mismos bloques (guardia vs mineral):")
     log(f"  {'setpoint':20s} {'guardia':>10s} {'mineral':>10s} {'quien pesa mas':>16s}")
     comp = []
     Bm = B[B["mineral"] >= 0]
-    for col in setpoints:
+    for col in setpoints + resultados:
         eg = eta2(Bm, col, "par_guardia")
         em = eta2(Bm, col, "mineral")
         quien = ("mineral" if em > eg * 1.5 else "guardia" if eg > em * 1.5 else "similar")
-        comp.append({"setpoint": col, "eta2_guardia": round(eg, 4),
-                     "eta2_mineral": round(em, 4), "domina": quien})
+        comp.append({"setpoint": col, "tipo": "resultado" if col in resultados else "consigna",
+                     "eta2_guardia": round(eg, 4), "eta2_mineral": round(em, 4), "domina": quien})
         log(f"  {col:20s} {eg:10.4f} {em:10.4f} {quien:>16s}")
 
     guardar(pd.DataFrame(filas).set_index("setpoint"), "E09a_guardias_vs_nulo.csv", ctx["salidas"])
-    guardar(pd.DataFrame(comp).set_index("setpoint"), "E09b_guardia_vs_mineral.csv", ctx["salidas"])
+    Dcomp = pd.DataFrame(comp).set_index("setpoint")
+    guardar(Dcomp, "E09b_guardia_vs_mineral.csv", ctx["salidas"])
+    ctx["guardia_vs_mineral"] = Dcomp
 
     desemp = (B.groupby("par_guardia")
                 .agg(bloques=("wt_activo", "size"), wt=("wt_activo", "mean"),

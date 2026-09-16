@@ -71,6 +71,8 @@ font-size:11px;color:var(--steel);line-height:1.5}
 .no{display:flex;gap:11px;padding:8px 0;border-bottom:1px dotted var(--hair)}
 .no:last-child{border-bottom:none}
 .nox{font-family:var(--mono);font-size:13px;color:var(--alarm);font-weight:600}
+.nox.ok{color:var(--band)}
+.nox.warn{color:var(--amber)}
 .no h3{font-family:var(--mono);font-size:10.5px;font-weight:600;margin-bottom:1px}
 .no p{font-size:10.5px;color:var(--steel);line-height:1.42}
 table.tr{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px;margin-top:4px}
@@ -188,6 +190,20 @@ position:relative;list-style:none}
         <b class="">61.5</b><br><s>hoy 60.01</s>
         <span class="arrow">SUBIR ↑</span></div>
     </div>
+    <div class="scale">
+      <div class="tag">FIT_104<em>Floculante</em></div>
+      <div class="track"><div class="rail"></div>
+        <div class="win " style="left:11.4%;width:47.4%"></div>
+        <div class="winlab " style="left:35.1%">0.27 – 0.8</div>
+        <div class="tick" style="left:27.5%"></div>
+        <div class="tick now" style="left:23.0%"></div>
+        <div class="tickl" style="left:23.0%">0.4</div>
+        <span class="ends l">0.1425</span><span class="ends r">1.26</span></div>
+      <div class="nums"><b class="">0.27 – 0.8</b> · apuntar
+        <b class="">0.45</b><br><s>hoy 0.4</s>
+        <span class="arrow">SUBIR ↑</span></div>
+    </div>
+  <div class='note go'><b>Se evaluó con datos, no se asumió:</b> FIT_104: 0.453 en ALTA vs 0.393 en BAJA (p=0.0). La diferencia es estadísticamente significativa y de magnitud relevante (≥3% del rango operativo), así que se promovió a variable objetivo — antes se descartaba sin probarla.</div><div class='note' style='margin-top:4px'>Presión de cama validada con la misma prueba: 60.53 en el tercio de mejor recuperación vs 57.474 en el peor (p=0.0, diferencia relevante).</div>
 </section>
 
 <section class="sec" style="border-top:1px solid var(--hair);margin-top:8px">
@@ -244,12 +260,31 @@ position:relative;list-style:none}
   <div class="col">
     <div class="sech"><h2>4 · Sin efecto comprobado</h2>
       <span class="chip no">No usar como variable de ajuste</span></div>
-    <div class='no'><div class='nox'>✕</div><div><h3>Floculante · FIT_104</h3><p>El valor es prácticamente el mismo en la operación de alta y de baja recuperación. No sirve como variable de ajuste para recuperar más agua.</p></div></div><div class='no'><div class='nox'>✕</div><div><h3>Válvula de alimentación · FV_1001</h3><p>El valor es prácticamente el mismo en la operación de alta y de baja recuperación. No sirve como variable de ajuste para recuperar más agua.</p></div></div><div class='no'><div class='nox'>✕</div><div><h3>Receta distinta por tipo de mineral</h3><p>Se detectaron 4 tipos de mineral. La ventana óptima casi no cambia entre ellos, por lo que <b>una sola ventana sirve para todo el mineral</b>.</p></div></div><div class='no'><div class='nox'>✕</div><div><h3>Diferencias entre guardias</h3><p>La brecha entre la mejor y la peor guardia es 0.41 puntos de % sólidos ≈ 5 m³/h, muy por debajo de la oportunidad de estandarizar.</p></div></div>
+    <div class='no'><div class='nox'>✕</div><div><h3>Válvula de alimentación · FV_1001</h3><p>Probado: mediana 31.0 en el tercio de mejor recuperación vs 31.0 en el peor. No hay diferencia estadísticamente significativa (p=1.0). No sirve como variable de ajuste para recuperar más agua.</p></div></div><div class='no'><div class='nox'>✕</div><div><h3>Receta distinta por tipo de mineral</h3><p>Se detectaron 4 tipos de mineral. La ventana óptima casi no cambia entre ellos, por lo que <b>una sola ventana sirve para todo el mineral</b>.</p></div></div><div class='no'><div class='nox'>✕</div><div><h3>Diferencias entre guardias</h3><p>La brecha entre la mejor y la peor guardia es 0.41 puntos de % sólidos ≈ 5 m³/h, muy por debajo de la oportunidad de estandarizar.</p></div></div>
     <div class="note" style="margin-top:11px">
       <b>Dónde está realmente la oportunidad:</b> la brecha de recuperación aparece
       <b>dentro</b> de cada tipo de mineral y <b>dentro</b> de cada guardia. No la causa el
       mineral ni el equipo humano: es ajuste turno a turno sin criterio común. Es
       exactamente lo que un sistema experto elimina.</div>
+  </div>
+</div>
+
+<div class="cols">
+  <div class="col">
+    
+        <div class="sech"><h2>5 · Métricas secundarias de recuperación</h2></div>
+        <p style="font-size:10.5px;color:var(--steel);margin:2px 0 6px">Piscina y FIT_114 son
+        de <b>planta</b> (reciben rebose de los tres espesadores más agua externa) — un
+        resultado aquí corrobora la señal de este espesador, no se le atribuye en exclusiva.</p>
+        <div class='no'><div class='nox warn'>⚠</div><div><h3>Nivel de piscina (LIT_106/LIT_107)</h3><p>89.432% en el tercio de mejor recuperación de este espesador vs 90.848% en el peor (p=0.0, n=151846+151847). Diferencia significativa, pero en dirección <b>contraria</b> a la esperada — no se descarta, pero no corrobora la hipótesis tal cual. Puede deberse a los otros dos espesadores o a los flujos externos de la piscina (FIT_123/FIT_601). Revisar antes de citarla.</p></div></div><div class='no'><div class='nox '>○</div><div><h3>Flujo hacia piscinas (FIT_114)</h3><p>1962.14 en el tercio de mejor recuperación de este espesador vs 1941.844 en el peor (p=0.0, n=151846+151847). No muestra diferencia significativa en esta ventana.</p></div></div>
+  </div>
+  <div class="col">
+    
+            <div class="sech"><h2>6 · ¿Manda el mineral o la guardia?</h2></div>
+            <p style="font-size:10.5px;color:var(--steel);margin:2px 0 4px">Fracción de la
+            varianza del resultado (η²) que explica cada factor, sobre los mismos bloques de
+            turno.</p>
+            <div class='note go' style='margin:6px 0 0'><b>% sólidos de descarga:</b> El <b>mineral</b> es la explicación principal, no queda solapado por la guardia. (η² mineral=0.014 · η² guardia=0.003, mismos bloques de turno).</div><div class='note ' style='margin:6px 0 0'><b>Recuperación de agua:</b> Mineral y guardia pesan parecido — ninguno domina claramente. (η² mineral=0.002 · η² guardia=0.002, mismos bloques de turno).</div>
   </div>
 </div>
 

@@ -89,6 +89,53 @@ def corr_parcial(df, x, y, controles):
     return float(np.corrcoef(rx, ry)[0, 1])
 
 
+def prueba_diferencia(a, b, n_permutaciones=300, semilla=0, piso_relevancia=0.03):
+    """
+    Diferencia de medianas entre dos grupos + p-valor por permutación.
+
+    Se usa para decidir con datos, no por supuesto, si una variable candidata
+    (p.ej. apertura de válvula, nivel de piscina) realmente difiere entre el
+    tercio de mejor y de peor recuperación — en vez de clasificarla a priori
+    como "objetivo" o "sin efecto" sin haberlo probado.
+
+    Con cientos de miles de filas, el p-valor solo no alcanza: hasta una
+    diferencia de ruido se vuelve "significativa" por el tamaño de muestra.
+    Por eso `relevante` exige además que la diferencia sea al menos
+    `piso_relevancia` (3% por defecto) del rango 10-90 de la variable
+    combinando ambos grupos — una diferencia real de escala operativa, no un
+    artefacto de N grande. `significativo` es solo el p-valor (se reporta
+    igual, para no esconder el dato) y `relevante` combina ambas.
+    """
+    a = np.asarray(a, dtype=float)
+    a = a[~np.isnan(a)]
+    b = np.asarray(b, dtype=float)
+    b = b[~np.isnan(b)]
+    if len(a) < 20 or len(b) < 20:
+        return {"n_a": len(a), "n_b": len(b), "mediana_a": np.nan,
+                "mediana_b": np.nan, "diferencia": np.nan, "p_valor": np.nan,
+                "significativo": False, "relevante": False}
+
+    real = float(np.median(a) - np.median(b))
+    pool = np.concatenate([a, b])
+    rng = np.random.default_rng(semilla)
+    na = len(a)
+    nulos = np.empty(n_permutaciones)
+    for i in range(n_permutaciones):
+        perm = rng.permutation(pool)
+        nulos[i] = np.median(perm[:na]) - np.median(perm[na:])
+    p = float((np.abs(nulos) >= abs(real)).mean())
+    significativo = bool(p < 0.05)
+
+    amplitud = float(np.percentile(pool, 90) - np.percentile(pool, 10))
+    relevante = significativo and amplitud > 0 and (abs(real) / amplitud) >= piso_relevancia
+
+    return {"n_a": len(a), "n_b": len(b),
+            "mediana_a": round(float(np.median(a)), 3),
+            "mediana_b": round(float(np.median(b)), 3),
+            "diferencia": round(real, 3), "p_valor": round(p, 3),
+            "significativo": significativo, "relevante": bool(relevante)}
+
+
 def filtro_hampel(serie, ventana, n_sigma=3.0):
     """
     Filtro de Hampel: marca como atípico lo que se aleja de la MEDIANA móvil
