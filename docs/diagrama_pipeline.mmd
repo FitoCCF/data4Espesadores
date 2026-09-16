@@ -1,0 +1,72 @@
+flowchart TD
+    subgraph FUENTE["1 · Fuente de datos"]
+        PI[("PI System<br/>tpi.southernperu.com.pe<br/>68 tags")]
+        GW["Pasarela PiGateway<br/>(Windows, HTTP)"]
+        TOOL["pi_tool.py extraer<br/>método RECORDED<br/>7 tramos de ~120 días"]
+        PI --> GW --> TOOL
+    end
+
+    subgraph CONFIG["Configuración (conf/base)"]
+        TAGS["tags.yaml<br/>68 tags · roles por espesador<br/>molinos, piscinas"]
+        REGLAS["reglas_operativas.yaml<br/>R1 = 75 % · R2 = 90 %<br/>turnos 07:30 / 19:30"]
+        PIPEY["pipeline.yaml<br/>ruta del dataset"]
+    end
+
+    TOOL --> CSV["7 × valores.csv<br/>grilla 1 min, ZOH en tags step"]
+    CSV --> PARQ[("datos_espesadores_recorded.parquet<br/>1.142.242 filas × 68 cols<br/>2024-07-14 → 2026-09-15")]
+    TAGS -.-> TOOL
+    TAGS -.-> PARQ
+
+    subgraph PIPE["2 · Pipeline E01–E11 (se corre 3 veces: TH-001, TH-002, TH-003)"]
+        direction TB
+        E01["E01 carga y perfil"] --> E02["E02 diagnóstico<br/>(descarta tags muertos)"]
+        E02 --> E03["E03 limpieza<br/>rango físico · planta produciendo · Hampel"]
+        E03 --> E04["E04 trenes<br/>señal activa: descarga, cizalle, % sólidos"]
+        E04 --> E05["E05 balance de agua<br/>rebose = agua alim − agua descarga"]
+        E05 --> E06["E06 estado estacionario"]
+        E06 --> E07["E07 validación de palanca<br/>(corr. parcial, tonelaje propio)"]
+        E07 --> E08["E08 tipo de mineral<br/>(clustering)"]
+        E08 --> E09["E09 guardias vs mineral<br/>η² · consignas por guardia"]
+        E09 --> E10["E10 ventanas operativas<br/>p10–p90 del tercio ALTA<br/>+ pruebas válvula/floculante<br/>+ ventanas por tren"]
+        E10 --> E11["E11 comparación de trenes<br/>(celdas emparejadas)"]
+    end
+
+    PARQ --> E01
+    PIPEY -.-> E01
+    REGLAS -.-> E03
+    ROL["Rol_Operaciones_2024/25/26.md<br/>(quién estaba en sala)"] -.-> E09
+
+    subgraph EPIS["3 · Análisis por episodios (dataset CRUDO, sin filtro E03)"]
+        ATORO["atoro_alimentacion.py<br/>parada Molino 1 / Molino 2 / total<br/>→ qué pasa en las 3 h siguientes"]
+        PISC["piscina_episodios.py<br/>piscina bajo 75 %<br/>piscina / FIT_114 SUBIENDO al tercio alto"]
+    end
+    PARQ --> ATORO
+    PARQ --> PISC
+    REGLAS -.-> PISC
+
+    E11 --> SAL[("data/06_reporting/TH00X/<br/>E01…E11 csv · REPORTE_COMPLETO.txt")]
+    ATORO --> INT[("data/01_interim/<br/>perfiles y episodios csv")]
+    PISC --> INT
+
+    subgraph REP["4 · Reportes"]
+        OP1["onepager_TH001.html"]
+        OP2["onepager_TH002.html"]
+        OP3["onepager_TH003.html"]
+        CONS["onepager_consolidado.html<br/>88 gráficos SVG · los 3 espesadores<br/>piscina · válvula · flujo · mineral · trenes"]
+    end
+    SAL --> OP1 & OP2 & OP3
+    SAL --> CONS
+    INT --> CONS
+
+    BIT["docs/bitacora_hallazgos.md<br/>H-A…H-H · N-1…N-14"]
+    SAL -.-> BIT
+    INT -.-> BIT
+
+    classDef dato fill:#DCDCD6,stroke:#6C757E,color:#15181B
+    classDef etapa fill:#F5F5F1,stroke:#5C646C,color:#15181B
+    classDef conf fill:#EFEFEB,stroke:#8C939A,stroke-dasharray:4 2,color:#15181B
+    classDef out fill:#1F2326,stroke:#1F2326,color:#F5F5F1
+    class PI,PARQ,CSV,SAL,INT dato
+    class E01,E02,E03,E04,E05,E06,E07,E08,E09,E10,E11,ATORO,PISC,TOOL,GW etapa
+    class TAGS,REGLAS,PIPEY,ROL conf
+    class OP1,OP2,OP3,CONS,BIT out

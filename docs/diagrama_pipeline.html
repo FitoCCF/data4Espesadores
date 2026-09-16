@@ -1,0 +1,106 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagrama del pipeline · Espesadores C2</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#E8E8E3;--panel:#F5F5F1;--ink:#15181B;--steel:#6C757E;--hair:#C4C5BF;
+--mono:'IBM Plex Mono',ui-monospace,monospace;--disp:'Barlow Condensed','Arial Narrow',sans-serif;--body:'Inter',-apple-system,'Segoe UI',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:13px;line-height:1.45;padding:22px 16px}
+.sheet{max-width:1180px;margin:0 auto;background:var(--panel);border:1px solid var(--hair);box-shadow:0 2px 14px rgba(20,24,28,.09)}
+.head{padding:18px 26px 12px;border-bottom:2px solid var(--ink)}
+.head h1{font-family:var(--disp);font-weight:700;font-size:28px;line-height:1;text-transform:uppercase}
+.head h1 span{display:block;font-size:12px;font-weight:500;letter-spacing:.13em;color:var(--steel);margin-bottom:5px}
+.lead{padding:10px 26px 0;font-size:11.5px;color:var(--steel);max-width:70ch}
+.dia{padding:14px 26px 20px;overflow-x:auto}
+.dia svg{max-width:100%;height:auto}
+.leg{display:flex;flex-wrap:wrap;gap:14px;padding:0 26px 16px;font-family:var(--mono);font-size:10px;color:var(--steel)}
+.leg i{display:inline-block;width:12px;height:12px;vertical-align:middle;margin-right:5px;border:1px solid var(--steel)}
+.foot{border-top:2px solid var(--ink);padding:10px 26px 14px;font-family:var(--mono);font-size:10px;color:var(--steel)}
+@media print{body{background:#fff;padding:0}.sheet{box-shadow:none;border:none;max-width:none}@page{size:A3 landscape;margin:8mm}}
+</style></head><body>
+<div class="sheet">
+<header class="head"><h1><span>Proyecto Espesadores C2 · TH-001 / TH-002 / TH-003</span>Diagrama del pipeline de análisis</h1></header>
+<p class="lead">De arriba a abajo: <b>(1)</b> los datos crudos se bajan de PI en 7 tramos y se consolidan en un solo archivo;
+<b>(2)</b> ese archivo pasa por 11 etapas de limpieza y análisis, una vez por espesador, guiado por los YAML de configuración;
+<b>(3)</b> en paralelo, el archivo crudo (sin el filtro que borra las paradas) alimenta los análisis por episodios;
+<b>(4)</b> todo termina en los one-pagers, el consolidado y la bitácora. Flechas punteadas = configuración e insumos; sólidas = datos.</p>
+<div class="leg"><span><i style="background:#DCDCD6"></i>dato</span><span><i style="background:#F5F5F1"></i>etapa / script</span>
+<span><i style="background:#EFEFEB;border-style:dashed"></i>configuración</span><span><i style="background:#1F2326"></i>reporte</span></div>
+<div class="dia"><pre class="mermaid">flowchart TD
+    subgraph FUENTE[&quot;1 · Fuente de datos&quot;]
+        PI[(&quot;PI System&lt;br/&gt;tpi.southernperu.com.pe&lt;br/&gt;68 tags&quot;)]
+        GW[&quot;Pasarela PiGateway&lt;br/&gt;(Windows, HTTP)&quot;]
+        TOOL[&quot;pi_tool.py extraer&lt;br/&gt;método RECORDED&lt;br/&gt;7 tramos de ~120 días&quot;]
+        PI --&gt; GW --&gt; TOOL
+    end
+
+    subgraph CONFIG[&quot;Configuración (conf/base)&quot;]
+        TAGS[&quot;tags.yaml&lt;br/&gt;68 tags · roles por espesador&lt;br/&gt;molinos, piscinas&quot;]
+        REGLAS[&quot;reglas_operativas.yaml&lt;br/&gt;R1 = 75 % · R2 = 90 %&lt;br/&gt;turnos 07:30 / 19:30&quot;]
+        PIPEY[&quot;pipeline.yaml&lt;br/&gt;ruta del dataset&quot;]
+    end
+
+    TOOL --&gt; CSV[&quot;7 × valores.csv&lt;br/&gt;grilla 1 min, ZOH en tags step&quot;]
+    CSV --&gt; PARQ[(&quot;datos_espesadores_recorded.parquet&lt;br/&gt;1.142.242 filas × 68 cols&lt;br/&gt;2024-07-14 → 2026-09-15&quot;)]
+    TAGS -.-&gt; TOOL
+    TAGS -.-&gt; PARQ
+
+    subgraph PIPE[&quot;2 · Pipeline E01–E11 (se corre 3 veces: TH-001, TH-002, TH-003)&quot;]
+        direction TB
+        E01[&quot;E01 carga y perfil&quot;] --&gt; E02[&quot;E02 diagnóstico&lt;br/&gt;(descarta tags muertos)&quot;]
+        E02 --&gt; E03[&quot;E03 limpieza&lt;br/&gt;rango físico · planta produciendo · Hampel&quot;]
+        E03 --&gt; E04[&quot;E04 trenes&lt;br/&gt;señal activa: descarga, cizalle, % sólidos&quot;]
+        E04 --&gt; E05[&quot;E05 balance de agua&lt;br/&gt;rebose = agua alim − agua descarga&quot;]
+        E05 --&gt; E06[&quot;E06 estado estacionario&quot;]
+        E06 --&gt; E07[&quot;E07 validación de palanca&lt;br/&gt;(corr. parcial, tonelaje propio)&quot;]
+        E07 --&gt; E08[&quot;E08 tipo de mineral&lt;br/&gt;(clustering)&quot;]
+        E08 --&gt; E09[&quot;E09 guardias vs mineral&lt;br/&gt;η² · consignas por guardia&quot;]
+        E09 --&gt; E10[&quot;E10 ventanas operativas&lt;br/&gt;p10–p90 del tercio ALTA&lt;br/&gt;+ pruebas válvula/floculante&lt;br/&gt;+ ventanas por tren&quot;]
+        E10 --&gt; E11[&quot;E11 comparación de trenes&lt;br/&gt;(celdas emparejadas)&quot;]
+    end
+
+    PARQ --&gt; E01
+    PIPEY -.-&gt; E01
+    REGLAS -.-&gt; E03
+    ROL[&quot;Rol_Operaciones_2024/25/26.md&lt;br/&gt;(quién estaba en sala)&quot;] -.-&gt; E09
+
+    subgraph EPIS[&quot;3 · Análisis por episodios (dataset CRUDO, sin filtro E03)&quot;]
+        ATORO[&quot;atoro_alimentacion.py&lt;br/&gt;parada Molino 1 / Molino 2 / total&lt;br/&gt;→ qué pasa en las 3 h siguientes&quot;]
+        PISC[&quot;piscina_episodios.py&lt;br/&gt;piscina bajo 75 %&lt;br/&gt;piscina / FIT_114 SUBIENDO al tercio alto&quot;]
+    end
+    PARQ --&gt; ATORO
+    PARQ --&gt; PISC
+    REGLAS -.-&gt; PISC
+
+    E11 --&gt; SAL[(&quot;data/06_reporting/TH00X/&lt;br/&gt;E01…E11 csv · REPORTE_COMPLETO.txt&quot;)]
+    ATORO --&gt; INT[(&quot;data/01_interim/&lt;br/&gt;perfiles y episodios csv&quot;)]
+    PISC --&gt; INT
+
+    subgraph REP[&quot;4 · Reportes&quot;]
+        OP1[&quot;onepager_TH001.html&quot;]
+        OP2[&quot;onepager_TH002.html&quot;]
+        OP3[&quot;onepager_TH003.html&quot;]
+        CONS[&quot;onepager_consolidado.html&lt;br/&gt;88 gráficos SVG · los 3 espesadores&lt;br/&gt;piscina · válvula · flujo · mineral · trenes&quot;]
+    end
+    SAL --&gt; OP1 &amp; OP2 &amp; OP3
+    SAL --&gt; CONS
+    INT --&gt; CONS
+
+    BIT[&quot;docs/bitacora_hallazgos.md&lt;br/&gt;H-A…H-H · N-1…N-14&quot;]
+    SAL -.-&gt; BIT
+    INT -.-&gt; BIT
+
+    classDef dato fill:#DCDCD6,stroke:#6C757E,color:#15181B
+    classDef etapa fill:#F5F5F1,stroke:#5C646C,color:#15181B
+    classDef conf fill:#EFEFEB,stroke:#8C939A,stroke-dasharray:4 2,color:#15181B
+    classDef out fill:#1F2326,stroke:#1F2326,color:#F5F5F1
+    class PI,PARQ,CSV,SAL,INT dato
+    class E01,E02,E03,E04,E05,E06,E07,E08,E09,E10,E11,ATORO,PISC,TOOL,GW etapa
+    class TAGS,REGLAS,PIPEY,ROL conf
+    class OP1,OP2,OP3,CONS,BIT out
+</pre></div>
+<footer class="foot">Fuente: src/espesadores/ · conf/base/ · docs/bitacora_hallazgos.md · Para PDF: imprimir esta página (Ctrl+P), A3 apaisado.</footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.4.1/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:'neutral',flowchart:{htmlLabels:true,curve:'basis'},fontFamily:'IBM Plex Mono, monospace'});</script>
+</body></html>
