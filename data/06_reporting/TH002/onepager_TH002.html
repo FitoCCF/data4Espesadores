@@ -216,7 +216,7 @@ position:relative;list-style:none}
         <b class="">38</b><br><s>hoy 36</s>
         <span class="arrow">SUBIR ↑</span></div>
     </div>
-  <div class='note go'><b>Se evaluó con datos, no se asumió:</b> FIT_105: 0.457 en ALTA vs 0.4 en BAJA (p=0.0) · FV_1002: 38.0 en ALTA vs 33.0 en BAJA (p=0.0). La diferencia es estadísticamente significativa y de magnitud relevante (≥3% del rango operativo), así que se promovió a variable objetivo — antes se descartaba sin probarla.</div><div class='note' style='margin-top:4px'>Presión de cama validada con la misma prueba: 61.741 en el tercio de mejor recuperación vs 60.53 en el peor (p=0.0, diferencia relevante).</div>
+  <div class='note go'><b>Se evaluó con datos, no se asumió:</b> FV_1002: 38.0 en ALTA vs 33.0 en BAJA (p=0.0) · FIT_105: 0.457 en ALTA vs 0.4 en BAJA (p=0.0). La diferencia es estadísticamente significativa y de magnitud relevante (≥3% del rango operativo), así que se promovió a variable objetivo — antes se descartaba sin probarla.</div><div class='note' style='margin-top:4px'>Presión de cama validada con la misma prueba: 61.741 en el tercio de mejor recuperación vs 60.53 en el peor (p=0.0, diferencia relevante).</div>
 </section>
 
 <section class="sec" style="border-top:1px solid var(--hair);margin-top:8px">
@@ -301,6 +301,14 @@ position:relative;list-style:none}
   </div>
 </div>
 
+<section class="sec" style="border-top:1px solid var(--hair);margin-top:8px">
+  <div class="sech"><h2>7 · Piscina, válvula y atoro de alimentación</h2>
+    <span class="chip mid">Hipótesis operativas — evaluadas, no asumidas</span>
+    <p>La piscina y FIT_114 son de planta, compartidos por los tres espesadores más agua
+    externa (FIT_123/FIT_601). Estas pruebas son correlacionales y contemporáneas, no
+    establecen causalidad ni el desfase real de un atoro.</p></div>
+  <div class='note warn'><h3 style='font-family:var(--mono);font-size:10.5px;font-weight:600;margin-bottom:3px'>¿Piscina baja → se reduce la descarga a propósito?</h3><b>No se confirma en esta comparación agregada:</b> con la piscina baja la velocidad de descarga mediana es <b>mayor</b> (22.375) que con la piscina alta (20.244) — lo contrario de la hipótesis. Puede ser que el ajuste solo ocurra en episodios puntuales de piscina crítica (&lt;75%, regla R1) que un tercio agregado diluye — pendiente de revisar por episodio. (mediana piscina ALTA=20.244 vs BAJA=22.375, p=0.0).</div><div class='note '><h3 style='font-family:var(--mono);font-size:10.5px;font-weight:600;margin-bottom:3px'>¿La válvula compensa un atoro en el ingreso?</h3>Válvula y flujo se mueven <b>juntos</b> (correlación parcial +0.156) — relación mecánica directa, sin señal clara de atoro compensado en esta comparación contemporánea.</div><p style='font-size:10.5px;color:var(--steel);margin:8px 0 2px'><b>Ventana operativa cuando la piscina está en su tercio alto</b></p><table class='tr'><tr><th>Variable</th><th>Rango (p10–p90)</th><th>Mediana</th></tr><tr><td>Flujo de alimentación · LIT_1111_Flow</td><td>1642.26 – 2345.66</td><td>1989.27</td></tr><tr><td>Válvula de alimentación · FV_1002</td><td>13 – 48</td><td>32</td></tr><tr><td>Bomba de descarga · vel_descarga</td><td>18 – 27.99</td><td>20.24</td></tr></table><p style='font-size:10.5px;color:var(--steel);margin:8px 0 2px'><b>Ventana operativa cuando FIT_114 (flujo hacia piscinas) está en su tercio alto</b></p><table class='tr'><tr><th>Variable</th><th>Rango (p10–p90)</th><th>Mediana</th></tr><tr><td>Flujo de alimentación · LIT_1111_Flow</td><td>1794.64 – 2502.66</td><td>2178.79</td></tr><tr><td>Válvula de alimentación · FV_1002</td><td>12 – 63</td><td>37</td></tr><tr><td>Bomba de descarga · vel_descarga</td><td>18.97 – 30.05</td><td>22.01</td></tr></table><p style='font-size:10.5px;color:var(--steel);margin:8px 0 2px'><b>Contexto — flujos externos a la piscina (NO son rebose de espesadores, tags.yaml §aguas_abajo):</b></p><ul style='margin-left:14px'><li><b>FIT_123</b>: piscina alta=413.2 · piscina baja=437.6</li><li><b>FIT_601</b>: piscina alta=993.5 · piscina baja=1004.1</li></ul>
+</section>
 <footer class="foot">
   <div><h4>Base del análisis</h4><ul>
     <li>1,142,242 registros crudos → 590,259 en operación

@@ -284,6 +284,104 @@ def generar_onepager(ctx, archivo=None):
             turno.</p>
             {items}"""
 
+    # --- Hipótesis operativas del usuario sobre piscina y válvula ---
+    hip = ctx.get("hipotesis_piscina", {})
+    hip_html = ""
+    if hip:
+        partes_hip = []
+
+        r = hip.get("vel_descarga_vs_nivel_piscina")
+        if r and r.get("mediana_a") is not None:
+            # Hipotesis: piscina BAJA -> el operador BAJA vel_descarga a proposito
+            # (favorece el rebose). Eso predice mediana en piscina ALTA >
+            # mediana en piscina BAJA.
+            if r["relevante"] and r["mediana_a"] > r["mediana_b"]:
+                veredicto = (f"<b>Se confirma:</b> con la piscina baja, la velocidad de "
+                            f"descarga mediana es menor ({r['mediana_b']}) que con la piscina "
+                            f"alta ({r['mediana_a']}) — compatible con reducir el descargue a "
+                            f"propósito para favorecer el rebose.")
+                cls = "go"
+            elif r["relevante"] and r["mediana_a"] <= r["mediana_b"]:
+                veredicto = (f"<b>No se confirma en esta comparación agregada:</b> con la "
+                            f"piscina baja la velocidad de descarga mediana es <b>mayor</b> "
+                            f"({r['mediana_b']}) que con la piscina alta ({r['mediana_a']}) — "
+                            f"lo contrario de la hipótesis. Puede ser que el ajuste solo ocurra "
+                            f"en episodios puntuales de piscina crítica (&lt;75%, regla R1) que "
+                            f"un tercio agregado diluye — pendiente de revisar por episodio.")
+                cls = "warn"
+            else:
+                veredicto = ("Sin diferencia relevante entre piscina alta y baja en esta "
+                             "comparación agregada.")
+                cls = ""
+            partes_hip.append(
+                f"<div class='note {cls}'><h3 style='font-family:var(--mono);font-size:10.5px;"
+                f"font-weight:600;margin-bottom:3px'>¿Piscina baja → se reduce la descarga a "
+                f"propósito?</h3>{veredicto} (mediana piscina ALTA={r['mediana_a']} vs "
+                f"BAJA={r['mediana_b']}, p={r['p_valor']}).</div>")
+
+        cp = hip.get("corr_parcial_valvula_flujo_alim")
+        if cp is not None and not (isinstance(cp, float) and np.isnan(cp)):
+            if cp < -0.05:
+                veredicto = (f"<b>Compatible con atoro compensado:</b> controlando el tonelaje "
+                            f"total del molino, cuando el flujo propio de este espesador cae, "
+                            f"la válvula tiende a abrirse más (correlación parcial {cp:+.3f}).")
+                cls = "go"
+            elif cp > 0.05:
+                veredicto = (f"Válvula y flujo se mueven <b>juntos</b> (correlación parcial "
+                            f"{cp:+.3f}) — relación mecánica directa, sin señal clara de atoro "
+                            f"compensado en esta comparación contemporánea.")
+                cls = ""
+            else:
+                veredicto = (f"Sin relación clara (correlación parcial {cp:+.3f}). Esta prueba "
+                            f"es contemporánea; el atoro que describe el operador persiste "
+                            f"después de que la molienda ya se normalizó, así que un análisis "
+                            f"por episodio con desfase temporal podría mostrar más que esta "
+                            f"comparación agregada.")
+                cls = ""
+            partes_hip.append(
+                f"<div class='note {cls}'><h3 style='font-family:var(--mono);font-size:10.5px;"
+                f"font-weight:600;margin-bottom:3px'>¿La válvula compensa un atoro en el "
+                f"ingreso?</h3>{veredicto}</div>")
+
+        def _tabla_ventana(titulo_v, ventana):
+            if not ventana:
+                return ""
+            filas = "".join(
+                f"<tr><td>{mapa.get(col, (col,))[0]} · {col}</td>"
+                f"<td>{v['min']:g} – {v['max']:g}</td><td>{v['mediana']:g}</td></tr>"
+                for col, v in ventana.items())
+            return (f"<p style='font-size:10.5px;color:var(--steel);margin:8px 0 2px'>"
+                    f"<b>{titulo_v}</b></p><table class='tr'><tr><th>Variable</th>"
+                    f"<th>Rango (p10–p90)</th><th>Mediana</th></tr>{filas}</table>")
+
+        partes_hip.append(_tabla_ventana(
+            "Ventana operativa cuando la piscina está en su tercio alto",
+            hip.get("ventana_piscina_alta")))
+        partes_hip.append(_tabla_ventana(
+            "Ventana operativa cuando FIT_114 (flujo hacia piscinas) está en su tercio alto",
+            hip.get("ventana_fit114_alta")))
+
+        ctxext = hip.get("contexto_externo")
+        if ctxext:
+            filas_ext = "".join(
+                f"<li><b>{ext}</b>: piscina alta={v['mediana_piscina_alta']} · "
+                f"piscina baja={v['mediana_piscina_baja']}</li>"
+                for ext, v in ctxext.items())
+            partes_hip.append(
+                f"<p style='font-size:10.5px;color:var(--steel);margin:8px 0 2px'>"
+                f"<b>Contexto — flujos externos a la piscina (NO son rebose de espesadores, "
+                f"tags.yaml §aguas_abajo):</b></p><ul style='margin-left:14px'>{filas_ext}</ul>")
+
+        hip_html = f"""
+<section class="sec" style="border-top:1px solid var(--hair);margin-top:8px">
+  <div class="sech"><h2>7 · Piscina, válvula y atoro de alimentación</h2>
+    <span class="chip mid">Hipótesis operativas — evaluadas, no asumidas</span>
+    <p>La piscina y FIT_114 son de planta, compartidos por los tres espesadores más agua
+    externa (FIT_123/FIT_601). Estas pruebas son correlacionales y contemporáneas, no
+    establecen causalidad ni el desfase real de un atoro.</p></div>
+  {''.join(partes_hip)}
+</section>"""
+
     # --- HTML final ---
     html = f"""<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8">
@@ -456,7 +554,7 @@ position:relative;list-style:none}}
     {mingua_html}
   </div>
 </div>
-
+{hip_html}
 <footer class="foot">
   <div><h4>Base del análisis</h4><ul>
     <li>{ctx.get('n_crudo', 0):,} registros crudos → {ctx.get('n_limpio', 0):,} en operación

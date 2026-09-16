@@ -9,6 +9,11 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
+# swaps de editor
+*.swp
+*.swo
+*~
+
 # configuración local (credenciales, rutas de máquina)
 conf/local/*
 !conf/local/.gitkeep

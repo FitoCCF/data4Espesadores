@@ -3,9 +3,9 @@
 import numpy as np
 import pandas as pd
 
-from espesadores.config import PISCINAS_TAGS
+from espesadores.config import PISCINAS_TAGS, GLOBALES
 from espesadores.dominio.piscinas import derivar_nivel
-from .comun import log, titulo, guardar, prueba_diferencia
+from .comun import log, titulo, guardar, prueba_diferencia, corr_parcial
 
 
 def e10_ventanas(df, cfg, ctx):
@@ -172,6 +172,112 @@ def e10_ventanas(df, cfg, ctx):
         guardar(pd.DataFrame(metricas_secundarias).T,
                 "E10e_metricas_secundarias_recuperacion.csv", ctx["salidas"])
     ctx["metricas_secundarias"] = metricas_secundarias
+
+    # --- Hipótesis operativas del usuario (2026-09-16) ------------------
+    # (a) Piscina baja -> el operador BAJA la velocidad de descarga a
+    #     propósito, para favorecer el rebose en vez del descargue. Se
+    #     prueba comparando vel_descarga entre el tercio de piscina ALTA y
+    #     BAJA (no el tercio de recuperación de este espesador).
+    # (b) Atoro de mineral grueso en la válvula de ingreso (tras un corte
+    #     aguas arriba: ciclón, parada de molienda) hace caer flujo_alim de
+    #     forma que persiste aun después de normalizarse la molienda; el
+    #     operador COMPENSA abriendo la válvula. Eso predice una relación
+    #     INVERSA entre válvula y flujo_alim propio, una vez controlado el
+    #     tonelaje total del molino (si no se controla, ambos suben y bajan
+    #     juntos con la producción, y esa relación mecánica esconde la de
+    #     compensación). Se prueba con correlación parcial
+    #     (comun.corr_parcial), no implica causalidad ni el desfase
+    #     temporal real del atoro — es una asociación contemporánea.
+    # (c) Ventana operativa de flujo_alim/válvula/vel_descarga cuando la
+    #     piscina o FIT_114 están en su tercio alto — responde "en qué
+    #     valores sube el nivel de agua en las piscinas".
+    # (d) FIT_123/FIT_601 (agua fresca y de QH, NO rebose de espesadores)
+    #     como contexto: si explican la diferencia de piscina tanto como el
+    #     propio espesador, la atribución a este equipo es más débil.
+    hipotesis_piscina = {}
+    if len(tags_pi) == 2 and "vel_descarga" in df.columns:
+        nb = pd.qcut(nivel.dropna(), 3, labels=["BAJA", "MEDIA", "ALTA"], duplicates="drop")
+        idx_p_baja, idx_p_alta = nb[nb == "BAJA"].index, nb[nb == "ALTA"].index
+
+        log("")
+        log("  Hipotesis: piscina baja -> se reduce la velocidad de descarga a proposito")
+        r = prueba_diferencia(df["vel_descarga"].reindex(idx_p_alta),
+                              df["vel_descarga"].reindex(idx_p_baja))
+        hipotesis_piscina["vel_descarga_vs_nivel_piscina"] = r
+        log(f"    vel_descarga con piscina ALTA={r['mediana_a']}  BAJA={r['mediana_b']}  "
+            f"p={r['p_valor']}  relevante={r['relevante']}")
+
+        log("  Ventana operativa cuando la piscina esta en su tercio ALTO:")
+        ventana_piscina_alta = {}
+        for col in dict.fromkeys([cfg["flujo_alim"], cfg["valvula_alim"], "vel_descarga"]):
+            if col not in df.columns:
+                continue
+            s = df.loc[idx_p_alta, col].dropna()
+            if len(s) < 50:
+                continue
+            ventana_piscina_alta[col] = {"min": round(float(s.quantile(.10)), 2),
+                                         "max": round(float(s.quantile(.90)), 2),
+                                         "mediana": round(float(s.median()), 2)}
+            log(f"    {col:20s} {ventana_piscina_alta[col]['min']:.2f} - "
+                f"{ventana_piscina_alta[col]['max']:.2f}  "
+                f"(mediana {ventana_piscina_alta[col]['mediana']:.2f})")
+        hipotesis_piscina["ventana_piscina_alta"] = ventana_piscina_alta
+
+        log("  Flujos externos a la piscina (NO son rebose de espesadores), para contexto:")
+        contexto_externo = {}
+        for ext in ("FIT_123", "FIT_601"):
+            if ext not in df.columns:
+                continue
+            contexto_externo[ext] = {
+                "mediana_piscina_alta": round(float(df.loc[idx_p_alta, ext].median()), 1),
+                "mediana_piscina_baja": round(float(df.loc[idx_p_baja, ext].median()), 1)}
+            log(f"    {ext}: piscina ALTA={contexto_externo[ext]['mediana_piscina_alta']}  "
+                f"piscina BAJA={contexto_externo[ext]['mediana_piscina_baja']}")
+        hipotesis_piscina["contexto_externo"] = contexto_externo
+
+    log("")
+    log("  Hipotesis: atoro en la valvula -- se abre mas cuando el flujo propio cae "
+        "relativo al tonelaje del molino")
+    if cfg["valvula_alim"] in df.columns and cfg["flujo_alim"] in df.columns:
+        cp = corr_parcial(df, cfg["valvula_alim"], cfg["flujo_alim"],
+                          [GLOBALES["alim_total_molino"]])
+        hipotesis_piscina["corr_parcial_valvula_flujo_alim"] = cp
+        nota_cp = ("inversa: compatible con atoro compensado por el operador"
+                  if pd.notna(cp) and cp < -0.05 else
+                  "directa: se mueven juntos (relación mecánica esperada, sin señal de atoro)"
+                  if pd.notna(cp) and cp > 0.05 else "sin relación clara")
+        log(f"    corr. parcial válvula~flujo_alim (controlando tonelaje molino) = "
+            f"{cp:+.3f}" if pd.notna(cp) else "    sin datos suficientes")
+        log(f"    -> {nota_cp}")
+
+    if "FIT_114" in df.columns:
+        f114_valido = df["FIT_114"].dropna()
+        if len(f114_valido) > 500:
+            nf = pd.qcut(f114_valido, 3, labels=["BAJA", "MEDIA", "ALTA"], duplicates="drop")
+            idx_f_alta = nf[nf == "ALTA"].index
+            log("  Ventana operativa cuando FIT_114 (flujo hacia piscinas) esta en su tercio ALTO:")
+            ventana_fit114_alta = {}
+            for col in dict.fromkeys([cfg["flujo_alim"], cfg["valvula_alim"], "vel_descarga"]):
+                if col not in df.columns:
+                    continue
+                s = df.loc[idx_f_alta, col].dropna()
+                if len(s) < 50:
+                    continue
+                ventana_fit114_alta[col] = {"min": round(float(s.quantile(.10)), 2),
+                                            "max": round(float(s.quantile(.90)), 2),
+                                            "mediana": round(float(s.median()), 2)}
+                log(f"    {col:20s} {ventana_fit114_alta[col]['min']:.2f} - "
+                    f"{ventana_fit114_alta[col]['max']:.2f}  "
+                    f"(mediana {ventana_fit114_alta[col]['mediana']:.2f})")
+            hipotesis_piscina["ventana_fit114_alta"] = ventana_fit114_alta
+
+    if hipotesis_piscina:
+        with open(f"{ctx['salidas']}/E10f_hipotesis_piscina_valvula.json", "w",
+                 encoding="utf-8") as fh:
+            import json
+            json.dump(hipotesis_piscina, fh, indent=2, ensure_ascii=False, default=str)
+        log(f"    [salida] {ctx['salidas']}/E10f_hipotesis_piscina_valvula.json")
+    ctx["hipotesis_piscina"] = hipotesis_piscina
 
     consolidada = {}
     for col in todos:

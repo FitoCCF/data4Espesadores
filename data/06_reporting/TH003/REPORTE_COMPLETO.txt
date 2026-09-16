@@ -206,6 +206,25 @@ E10 - VENTANAS OPERATIVAS OPTIMAS
   nivel_piscina (LIT_106/107)  ALTA=91.136%  BAJA=90.652%  p=0.0  relevante=False
   FIT_114 (flujo hacia piscinas) ALTA=1866.15  BAJA=1921.259  p=0.0  relevante=True
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH003/E10e_metricas_secundarias_recuperacion.csv
+
+  Hipotesis: piscina baja -> se reduce la velocidad de descarga a proposito
+    vel_descarga con piscina ALTA=21.014  BAJA=21.991  p=0.0  relevante=True
+  Ventana operativa cuando la piscina esta en su tercio ALTO:
+    LIT_1211_Flow        1540.72 - 1953.35  (mediana 1717.25)
+    FV_1003              29.00 - 100.00  (mediana 49.00)
+    vel_descarga         19.02 - 31.99  (mediana 21.01)
+  Flujos externos a la piscina (NO son rebose de espesadores), para contexto:
+    FIT_123: piscina ALTA=415.6  piscina BAJA=437.5
+    FIT_601: piscina ALTA=993.2  piscina BAJA=1004.3
+
+  Hipotesis: atoro en la valvula -- se abre mas cuando el flujo propio cae relativo al tonelaje del molino
+    corr. parcial válvula~flujo_alim (controlando tonelaje molino) = +0.048
+    -> sin relación clara
+  Ventana operativa cuando FIT_114 (flujo hacia piscinas) esta en su tercio ALTO:
+    LIT_1211_Flow        1557.10 - 2013.71  (mediana 1733.05)
+    FV_1003              16.00 - 89.00  (mediana 44.00)
+    vel_descarga         19.87 - 30.00  (mediana 21.99)
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH003/E10f_hipotesis_piscina_valvula.json
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH003/E10c_ventana_consolidada.csv
 
   VENTANA CONSOLIDADA (aplicable a todo tipo de mineral):
