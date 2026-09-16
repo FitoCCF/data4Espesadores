@@ -83,9 +83,13 @@ def e09_guardias(df, cfg, ctx):
     setpoints = [cfg["floculante"], cfg["valvula_alim"], cfg["nivel_interfaz"],
                  "vel_descarga", "vel_cizalle"]
     setpoints = [c for c in setpoints if c in df.columns]
+    # Respuestas del proceso que no son consigna (no entran a la prueba de
+    # guardia, pero sí a la tabla de "cómo opera cada dotación", E09d).
+    otros = [c for c in (cfg["presion_cama"], cfg["torque"], cfg["flujo_alim"])
+             if c in df.columns and c not in setpoints]
     B = (df.dropna(subset=["par_guardia"])
            .groupby("bloque")
-           .agg({**{c: "median" for c in setpoints},
+           .agg({**{c: "median" for c in setpoints + otros},
                  "wt_activo": "median", "recuperacion": "median",
                  "par_guardia": "first", "mineral": lambda s: s.mode().iloc[0]
                  if len(s.mode()) else -1})
@@ -142,6 +146,12 @@ def e09_guardias(df, cfg, ctx):
                      recuperacion=("recuperacion", "mean"))
                 .sort_values("wt", ascending=False).round(3))
     guardar(desemp, "E09c_desempeno_por_guardia.csv", ctx["salidas"])
+    # Consignas (mediana por bloque de turno) y resultados POR PAR DE GUARDIA:
+    # "cómo opera cada dotación", para graficar la operación manual del
+    # operador frente a la receta por tipo de mineral (E10h).
+    consignas = B.groupby("par_guardia")[setpoints + otros + resultados].median().round(3)
+    consignas["bloques"] = B.groupby("par_guardia").size()
+    guardar(consignas, "E09d_consignas_por_guardia.csv", ctx["salidas"])
     ctx["guardias_ok"] = True
     ctx["rango_guardias"] = float(desemp.wt.max() - desemp.wt.min())
     log(f"  Rango entre guardias: {ctx['rango_guardias']:.2f} puntos de %solidos "

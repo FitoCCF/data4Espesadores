@@ -157,6 +157,7 @@ E09 - EFECTO DE LAS GUARDIAS
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E09a_guardias_vs_nulo.csv
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E09b_guardia_vs_mineral.csv
     [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E09c_desempeno_por_guardia.csv
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E09d_consignas_por_guardia.csv
   Rango entre guardias: 0.41 puntos de %solidos (5 m3/h)
 
 ==============================================================================
@@ -238,6 +239,8 @@ E10 - VENTANAS OPERATIVAS OPTIMAS
   vel_cizalle               59.99     65.00    65.50    65.00      bomba
   FIT_104                    0.27      0.45     0.80     0.40   objetivo
   FV_1001                    6.35     31.00    44.00    31.00 sin_efecto
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E10g_ventanas_por_tren.csv
+    [salida] /home/daigo/data4Espesadores/data/06_reporting/TH001/E10h_objetivo_por_mineral.csv
 
 ==============================================================================
 E11 - COMPARACION DE TRENES DE BOMBEO

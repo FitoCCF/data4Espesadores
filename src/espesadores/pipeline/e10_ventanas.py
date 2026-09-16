@@ -308,6 +308,44 @@ def e10_ventanas(df, cfg, ctx):
         log(f"  {col:22s} {r['min']:8.2f} {r['objetivo']:9.2f} {r['max']:8.2f} "
             f"{r['actual']:8.2f} {r['clase']:>10s}")
 
+    # --- Ventanas POR TREN para las bombas (pedido del usuario 2026-09-16):
+    # la señal activa mezcla ambos trenes; el sistema experto necesita el
+    # rango de cada bomba con su tag. Mismo método: p10-p90 del tercio ALTA,
+    # restringido a las filas en que ESE tren estaba en servicio. ---
+    filas_tren = []
+    if "tren" in df.columns:
+        for tren in cfg["trenes"]:
+            for rol in ("descarga", "cizalle"):
+                col = tren[rol]
+                if col not in df.columns:
+                    continue
+                s_alta = ALTA.loc[ALTA["tren"] == tren["nombre"], col].dropna()
+                s_todo = df.loc[df["tren"] == tren["nombre"], col].dropna()
+                if len(s_alta) < 50:
+                    continue
+                filas_tren.append({
+                    "tren": tren["nombre"], "rol": rol, "tag": col,
+                    "min": round(float(s_alta.quantile(.10)), 2),
+                    "max": round(float(s_alta.quantile(.90)), 2),
+                    "objetivo": round(float(s_alta.median()), 2),
+                    "actual": round(float(s_todo.median()), 2),
+                    "escala_min": round(float(s_todo.quantile(.01)), 2),
+                    "escala_max": round(float(s_todo.quantile(.99)), 2),
+                    "pct_tiempo_alta": round(100 * len(s_alta) / max(1, len(ALTA)), 1)})
+    if filas_tren:
+        guardar(pd.DataFrame(filas_tren).set_index(["tren", "rol"]),
+                "E10g_ventanas_por_tren.csv", ctx["salidas"])
+
+    # --- Objetivo (y rango) de cada parámetro POR TIPO DE MINERAL, en
+    # formato largo, para graficar "la receta según el mineral". ---
+    filas_min = []
+    for tipo, v in ventanas_por_mineral.items():
+        for col, r in v.items():
+            filas_min.append({"mineral": tipo, "parametro": col, **r})
+    if filas_min:
+        guardar(pd.DataFrame(filas_min).set_index(["parametro", "mineral"]),
+                "E10h_objetivo_por_mineral.csv", ctx["salidas"])
+
     ctx["ventanas"] = consolidada
     ctx["ventanas_por_mineral"] = ventanas_por_mineral
     ctx["brecha"] = pd.DataFrame(resumen)
