@@ -109,7 +109,8 @@ def analizar(espesador="TH-001", ventana_min=120, bin_min=10, umbral_pct=None,
     base_nombre = f"piscina_baja_{espesador.replace('-', '')}"
     perfil.to_csv(os.path.join(carpeta, base_nombre + "_perfil.csv"))
     eps.to_csv(os.path.join(carpeta, base_nombre + "_episodios.csv"), index=False)
-    log(f"\n  [OK] {carpeta}/{base_nombre}_perfil.csv / _episodios.csv")
+    pd.DataFrame({"sana": base, "baja": durante}).to_csv(os.path.join(carpeta, base_nombre + "_base.csv"))
+    log(f"\n  [OK] {carpeta}/{base_nombre}_perfil.csv / _episodios.csv / _base.csv")
     return {"perfil": perfil, "episodios": eps, "base": base, "durante": durante}
 
 

@@ -46,3 +46,4 @@ data/99_deprecated/*
 data/06_reporting/TH00*/*
 !data/06_reporting/TH00*/onepager_*.html
 !data/06_reporting/TH00*/REPORTE_COMPLETO.txt
+!data/06_reporting/onepager_consolidado.html

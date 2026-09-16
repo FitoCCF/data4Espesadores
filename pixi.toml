@@ -20,6 +20,11 @@ piscinas = "PYTHONPATH=src python -m espesadores.dominio.piscinas"
 guardias = "PYTHONPATH=src python -m espesadores.dominio.guardias"
 diagnostico = "PYTHONPATH=src python -m espesadores.calidad.diagnostico_extraccion"
 test = "PYTHONPATH=src python -m pytest tests/ -v"
+# Un solo one-pager con los tres espesadores (lee E09-E11 y los episodios ya calculados)
+onepager-consolidado = "PYTHONPATH=src python -m espesadores.reportes.onepager_consolidado"
+# Analisis por episodios (dataset crudo): paradas de molienda y piscina baja
+episodios = "PYTHONPATH=src python -m espesadores.dominio.atoro_alimentacion"
+piscina-episodios = "PYTHONPATH=src python -m espesadores.dominio.piscina_episodios"
 # Solo disponible en la máquina Windows (entorno `extraccion`, ver abajo):
 #   pixi run -e extraccion extraer
 extraer = "PYTHONPATH=src python scripts/extraer.py"

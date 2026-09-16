@@ -180,7 +180,8 @@ def analizar(espesador="TH-001", ventana_min=180, bin_min=15, min_evento_min=10,
         base_nombre = f"atoro_{nombre}_{espesador.replace('-', '')}"
         perfil.to_csv(os.path.join(carpeta, base_nombre + "_perfil.csv"))
         eps.to_csv(os.path.join(carpeta, base_nombre + "_episodios.csv"), index=False)
-        log(f"\n  [OK] {carpeta}/{base_nombre}_perfil.csv / _episodios.csv")
+        pd.Series(base, name="base").to_csv(os.path.join(carpeta, base_nombre + "_base.csv"))
+        log(f"\n  [OK] {carpeta}/{base_nombre}_perfil.csv / _episodios.csv / _base.csv")
         resultados[nombre] = {"perfil": perfil, "episodios": eps, "base": base}
 
     return resultados
