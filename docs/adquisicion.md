@@ -14,7 +14,7 @@ y cachea; ver `docs/agente_offline.md`.
 |---|---|---|
 | `from_pi.py` | 5 tags del courier (o tags arbitrarios con `--tags`) desde PI por la pasarela PiGateway. **Ruta vigente.** | `requests`, `pandas` |
 | `from_pi_afsdk.py` | Lo mismo con AF SDK directo (pythonnet). **Referencia**, solo Windows con PI AF Client. | Windows + `clr` |
-| `from_db.py` | Intensidades y ensayos de la tabla Postgres `works4cdp_assay` | `sqlalchemy` + driver Postgres |
+| `from_db.py` | Intensidades y ensayos de la tabla Postgres `works4cdp_assay` | `sqlalchemy` + `psycopg2` (ya en el entorno) + la BD levantada |
 | `database.py` | `DBManager` / `Extractor` (portado de `src/database` de data2TesisV2) | ídem, import perezoso |
 | `pi_client.py` | Cliente HTTP de la pasarela. **Copia única del repo**: es la que usa también el agente | `requests` |
 | `config.py` | `DATA_RAW = data/00_raw` de este repo (en el original era `data/raw`) | — |
@@ -34,6 +34,13 @@ pixi run adquirir-pi --tags _294100_LIT_1011_ABB --desde 2026-08-01 --hasta 2026
 pixi run adquirir-db --sample-id 24 --tabla assays --hasta 2026-08-31 \
     --out data/00_raw/assays_cobre.csv
 ```
+
+La ruta de BD necesita el contenedor `postgres_db` levantado. Por defecto
+apunta a `localhost:5433` (el contenedor publica `0.0.0.0:5433->5432/tcp`);
+se cambia con `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_PORT` / `DB_NAME`.
+`DB_DRIVER` (por defecto `psycopg2`) fija el dialecto en la URL: SQLAlchemy
+2.1 cambió el valor implícito de `postgresql://` a psycopg v3, así que el
+driver va explícito para no depender de la versión instalada.
 
 Equivalente sin pixi: `PYTHONPATH=src python -m acquisition.from_pi …`.
 

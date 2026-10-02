@@ -35,7 +35,10 @@ def extraer_assays(sample_id: int, desde: str | None = None, hasta: str | None =
 
 
 def _main():
-    ap = argparse.ArgumentParser(description="Adquisición: extrae intensidades (o ensayos) de la BD Postgres")
+    ap = argparse.ArgumentParser(
+        description="Adquisición: extrae intensidades (o ensayos) de la BD Postgres. "
+                    "Requiere el contenedor postgres_db levantado (por defecto localhost:5433); "
+                    "credenciales por DB_USER/DB_PASSWORD/DB_HOST/DB_PORT/DB_NAME.")
     ap.add_argument("--sample-id", type=int, default=24, help="sample_id del courier (24 = concentrado final cobre)")
     ap.add_argument("--tabla", default="assays", choices=["assays", "intensidades"],
                     help="'intensidades' trae solo canales; 'assays' trae canales + leyes de laboratorio")

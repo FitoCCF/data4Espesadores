@@ -29,10 +29,16 @@ DB_CONFIG_DEFAULT = {
     "dbname": os.environ.get("DB_NAME", "mydb"),
 }
 
+# Driver explícito en la URL: SQLAlchemy 2.1 cambió el dialecto por defecto de
+# `postgresql://` de psycopg2 a psycopg (v3), así que dejarlo implícito rompe
+# según la versión instalada. El entorno declara psycopg2 (feature `analisis`);
+# con DB_DRIVER=psycopg se usa el v3 si algún día se migra.
+DB_DRIVER = os.environ.get("DB_DRIVER", "psycopg2")
+
 _AYUDA_DEPS = (
-    "Falta sqlalchemy o el driver de Postgres. En este repo la ruta de BD es "
-    "opcional: instalarlos con `pixi add sqlalchemy psycopg2` (o usar la ruta "
-    "de PI, src/acquisition/from_pi.py, que solo necesita requests + pandas)."
+    "Falta sqlalchemy o el driver de Postgres. Están declarados en la feature "
+    "`analisis` de pixi.toml (sqlalchemy + psycopg2): correr `pixi install`. "
+    "La ruta de PI (src/acquisition/from_pi.py) no los necesita."
 )
 
 
@@ -42,7 +48,7 @@ class DBManager:
             from sqlalchemy import create_engine
         except ImportError as e:  # noqa: TRY003 — el mensaje es la ayuda útil
             raise RuntimeError(_AYUDA_DEPS) from e
-        self.url = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+        self.url = f"postgresql+{DB_DRIVER}://{user}:{password}@{host}:{port}/{dbname}"
         self.engine = create_engine(self.url)
 
     def execute_query(self, query, params=None):
