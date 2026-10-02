@@ -72,7 +72,9 @@ def _tag(esp, rol):
 
 def _f(v, nd=2):
     try:
-        return f"{float(v):.{nd}f}".rstrip("0").rstrip(".")
+        txt = f"{float(v):.{nd}f}"
+        # Solo se recortan ceros decimales: con nd=0, "410" debe seguir siendo "410".
+        return txt.rstrip("0").rstrip(".") if nd > 0 else txt
     except (TypeError, ValueError):
         return "–"
 
