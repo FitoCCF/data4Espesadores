@@ -25,6 +25,18 @@ onepager-consolidado = "PYTHONPATH=src python -m espesadores.reportes.onepager_c
 # Analisis por episodios (dataset crudo): paradas de molienda y piscina baja
 episodios = "PYTHONPATH=src python -m espesadores.dominio.atoro_alimentacion"
 piscina-episodios = "PYTHONPATH=src python -m espesadores.dominio.piscina_episodios"
+# Todos los parametros por espesador y tren cuando FIT_114 (flujo a piscinas) sube
+flujo-piscinas = "PYTHONPATH=src python -m espesadores.dominio.flujo_piscinas_parametros"
+onepager-flujo-piscinas = "PYTHONPATH=src python -m espesadores.reportes.onepager_flujo_piscinas"
+# Lo mismo en funcion del nivel de los tanques temporales LIT_108/LIT_109
+tanques = "PYTHONPATH=src python -m espesadores.dominio.flujo_piscinas_parametros --senal tanques"
+onepager-tanques = "PYTHONPATH=src python -m espesadores.reportes.onepager_flujo_piscinas --senal tanques"
+# Con que valores de cada parametro recupera mas agua cada espesador (balance E05), por tren
+recuperacion = "PYTHONPATH=src python -m espesadores.dominio.recuperacion_parametros"
+onepager-recuperacion = "PYTHONPATH=src python -m espesadores.reportes.onepager_recuperacion"
+# Agente offline (reglas de operadores + estadística + LLM local por Ollama):
+#   pixi run agente estado | informe | vigilar | preguntar "..." | reglas listar
+agente = "PYTHONPATH=src python -m espesadores.agente.cli"
 # Solo disponible en la máquina Windows (entorno `extraccion`, ver abajo):
 #   pixi run -e extraccion extraer
 extraer = "PYTHONPATH=src python scripts/extraer.py"
@@ -40,6 +52,8 @@ pyarrow = ">=18,<19"
 pyyaml = ">=6,<7"
 pytest = ">=8,<9"
 pytz = ">=2024.1"
+# Cliente HTTP de la pasarela PiGateway y de Ollama (src/espesadores/agente/).
+requests = ">=2.31,<3"
 
 # ------------------------------------------------------------------------- #
 # Feature `analisis`: el stack completo de EDA/modelado. Restringida a

@@ -40,6 +40,17 @@ ALLOWLIST = {
         "de 1min. No enmascara huecos de sensor: el mineral no tiene dato propio "
         "de 1 minuto, es una agregación deliberada, documentada en el propio "
         "docstring de E08.",
+    ("agente/datos.py", "v = s.reindex(union).ffill().reindex(grilla)"):
+        "Reconstrucción a grilla de un tag `step` desde eventos crudos de PI "
+        "(retención de orden cero: una consigna vale hasta el siguiente evento). "
+        "Es la misma regla con la que se construyó el parquet canónico "
+        "(pi_tool.py ReconstructorGrilla) y va seguida de la guarda compmax: "
+        "si el hueco supera 1.5 x compmax el valor se anula (NaN), así que no "
+        "fabrica constantes sobre pérdida de dato.",
+    ("agente/datos.py", "ult = pd.Series(s.index, index=s.index).reindex(union).ffill().reindex(grilla)"):
+        "Propaga el INSTANTE del último evento real (no un valor de proceso) "
+        "para calcular la edad del dato en cada punto de la grilla; es justamente "
+        "lo que permite anular por compmax en la línea siguiente.",
 }
 
 

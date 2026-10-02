@@ -1,0 +1,10 @@
+reglas:
+- id: ALERTA_TORQUE_DESCARGA
+  nombre: Alta torque con baja descarga
+  espesador: '*'
+  condicion: (torque > 38) & (vel_descarga < 22)
+  duracion_min: 20
+  severidad: media
+  mensaje: Torque >38 durante >20 min con descarga <22 en espesador
+  autor: agente
+  creada: 2026-09-18 14:52

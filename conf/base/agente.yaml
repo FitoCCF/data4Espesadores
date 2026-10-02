@@ -1,0 +1,61 @@
+# ==============================================================================
+# AGENTE OFFLINE — ESPESADORES C2
+# ==============================================================================
+# Configuración del agente local (src/espesadores/agente/). Tres capas:
+#   1. Reglas declaradas por operadores  -> conf/base/reglas_operadores.yaml
+#   2. Estadística determinística        -> agente/estadistica.py
+#   3. LLM local (Ollama en la GPU)      -> agente/llm.py
+# Las capas 1 y 2 funcionan sin el LLM. El LLM solo orquesta herramientas y
+# redacta: nunca toca el dato crudo ni decide qué es una alerta.
+#
+# Nada de esto sale de la máquina: la pasarela PI corre en el host Windows y
+# el modelo corre en WSL2. Lo específico de cada máquina va en
+# conf/local/agente.local.yaml (mismas claves, se superpone a este archivo).
+
+llm:
+  # Servidor Ollama local. Instalación única (requiere internet una vez):
+  #   curl -fsSL https://ollama.com/install.sh | sh
+  #   ollama pull qwen3:14b
+  host: "http://127.0.0.1:11434"
+  # qwen3:14b (Q4_K_M ~9 GB) entra en 16 GB de VRAM y llama herramientas
+  # bien. Alternativas: qwen3:30b-a3b (más rápido, ~18 GB, parte en CPU),
+  # llama3.1:8b (más liviano, herramientas aceptables).
+  modelo: "qwen3:14b"
+  num_ctx: 16384          # tokens de contexto; las herramientas devuelven resúmenes, no series
+  temperatura: 0.1
+  max_iteraciones: 12     # llamadas a herramientas por pregunta antes de cortar
+  timeout_s: 600
+  # Si `pensar` es true y el modelo lo soporta (qwen3), razona antes de
+  # responder. Mejora la elección de herramientas; cuesta tiempo.
+  pensar: true
+
+datos:
+  # Cliente HTTP de la pasarela PiGateway (fuera del repo, herramienta del
+  # usuario). Se importa desde aquí; se puede sobreescribir con la variable
+  # de entorno PI_CLIENT_DIR.
+  pi_client_dir: "~/data4cdpv1_local/scripts"
+  # Ventanas bajadas de PI se guardan aquí por día para no volver a pedirlas.
+  cache: "data/03_cache_agente"
+  grilla: "1min"
+  # Cota dura de una sola consulta: evita repetir el OOM de la extracción
+  # completa (PROGRESO.md §2.3). Para rangos mayores, usar el parquet
+  # canónico del pipeline (rutas.entrada de pipeline.yaml), que ya cubre
+  # 2024-07-14 -> 2026-09-15.
+  max_dias_por_consulta: 31
+  zona_horaria: "America/Lima"
+  # Días de historia PI que se piden por bloque (la pasarela trocea igual).
+  chunk_dias: 3
+
+vigilancia:
+  # Modo `vigilar`: cada `cada_min` minutos se baja la última `ventana_horas`
+  # de PI, se evalúan reglas + estadística y se escribe el estado.
+  ventana_horas: 8
+  cada_min: 10
+  salidas: "data/06_reporting/agente"
+  # Si hay LLM disponible, redacta un resumen de turno con los hallazgos.
+  resumen_llm: true
+
+reglas_operadores: "conf/base/reglas_operadores.yaml"
+# Reglas propuestas por el LLM o por `agente reglas proponer` esperan aquí
+# hasta que un operador las apruebe (`agente reglas aprobar <id>`).
+reglas_pendientes: "conf/base/reglas_pendientes.yaml"

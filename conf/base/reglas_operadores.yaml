@@ -1,0 +1,119 @@
+# ==============================================================================
+# REGLAS DEFINIDAS POR OPERADORES — AGENTE OFFLINE
+# ==============================================================================
+# Cada regla es una condición escrita con NOMBRES DE ROL (no tags PI) que el
+# agente evalúa minuto a minuto sobre la ventana de datos. Cuando la
+# condición se cumple de forma continua durante `duracion_min` minutos, se
+# emite un hallazgo con la `severidad` y el `mensaje` indicados.
+#
+# Para agregar una regla: copiar un bloque, cambiar `id` (único) y la
+# `condicion`. Validar con:  pixi run agente reglas validar
+# Probar contra historia:    pixi run agente reglas probar <id> --inicio ... --fin ...
+#
+# ---- Variables disponibles ---------------------------------------------------
+# Por espesador (`espesador: "*"` evalúa la regla en TH-001, TH-002 y TH-003;
+# o poner un nombre concreto):
+#   flujo_alim      m3/h alimentación        valvula_alim   % apertura (operador)
+#   presion_cama    kPa cama de sólidos       torque         % torque rastra
+#   nivel_interfaz  nivel interface           nivel_cajon    nivel cajón
+#   floculante      flujo floculante          agua_dilucion  flujo agua dilución
+#   vel_descarga    velocidad bomba del tren en servicio (regla E04)
+#   vel_cizalle     velocidad bomba cizalla del tren en servicio
+#   wt_activo       %sólidos descarga del tren en servicio
+#   dit_activo      densidad descarga del tren en servicio
+#   trenes_activos  nº de trenes con bomba > umbral
+# De planta (disponibles en toda regla, también con `espesador: planta`):
+#   nivel_piscina   % (derivado de LIT_106/LIT_107 con la regla de piscinas.py)
+#   flujo_piscinas  FIT_114 (indicador INDIRECTO, ver tags.yaml)
+#   tk001, tk002    LIT_108 / LIT_109 tanques temporales
+#   molino_1, molino_2, molienda_total   t/h
+#   ley_rougher, ratio_cu                proxies de tipo de mineral
+#   agua_fresca (FIT_123), agua_qh (FIT_601)   entran a piscina, NO son rebose
+#
+# ---- Funciones ---------------------------------------------------------------
+#   media(x, "2h")      mediana(x, "2h")    minimo(x, "2h")   maximo(x, "2h")
+#       estadístico móvil hacia atrás sobre la ventana indicada
+#   delta(x, "1h")      x(t) - x(t - 1h)
+#   pendiente(x, "1h")  cambio por hora, estimado sobre la ventana
+#   congelado(x, "60min")  True donde x lleva ese tiempo sin cambiar
+#   hora_entre("07:00", "08:00")  True dentro de ese rango horario local
+#   abs(x), y/o/no se escriben  &  |  ~   (con paréntesis en cada término)
+#
+# `mensaje` admite {variable} con el valor al inicio del episodio y
+# {duracion_min}. Las reglas con `activa: false` se ignoran.
+
+reglas:
+  # --- Piscina (insight principal del proyecto) -------------------------------
+  - id: piscina_bajo_minimo
+    nombre: "Piscina bajo el mínimo R1"
+    espesador: planta
+    condicion: "nivel_piscina < 75"
+    duracion_min: 30
+    severidad: alta
+    mensaje: "Nivel de piscina en {nivel_piscina:.1f} % (mínimo 75 %) durante {duracion_min} min"
+    autor: "reglas_operativas.yaml R1"
+
+  - id: piscina_cayendo_rapido
+    nombre: "Piscina cayendo más de 2 pp/h"
+    espesador: planta
+    condicion: "(pendiente(nivel_piscina, '2h') < -2) & (molienda_total > 100)"
+    duracion_min: 60
+    severidad: media
+    mensaje: "Piscina cae {pendiente_nivel_piscina_2h:.1f} pp/h con planta produciendo"
+    autor: "análisis 2026-09-17 (PROGRESO.md §6.3)"
+
+  - id: piscina_baja_al_cierre_de_guardia
+    nombre: "Piscina bajo 90 % al cierre de guardia R2"
+    espesador: planta
+    condicion: "hora_entre('07:15', '07:30') & (nivel_piscina < 90) | hora_entre('19:15', '19:30') & (nivel_piscina < 90)"
+    duracion_min: 15
+    severidad: media
+    mensaje: "Cierre de guardia con piscina en {nivel_piscina:.1f} % (meta ≥ 90 %)"
+    autor: "reglas_operativas.yaml R2"
+
+  # --- Alimentación y válvula (hipótesis de atoro) ----------------------------
+  - id: valvula_abierta_flujo_bajo
+    nombre: "Válvula abierta de más con flujo bajo"
+    espesador: "*"
+    condicion: "(valvula_alim > mediana(valvula_alim, '6h') + 10) & (flujo_alim < 0.85 * mediana(flujo_alim, '6h')) & (molienda_total > 100)"
+    duracion_min: 45
+    severidad: media
+    mensaje: "Válvula {valvula_alim:.0f} % con flujo {flujo_alim:.0f} m3/h por debajo de lo usual, molienda {molienda_total:.0f} t/h"
+    autor: "hipótesis 2 del usuario (tags.yaml)"
+
+  - id: torque_alto
+    nombre: "Torque de rastra alto"
+    espesador: "*"
+    condicion: "torque > 40"
+    duracion_min: 20
+    severidad: alta
+    mensaje: "Torque {torque:.1f} % sostenido; revisar cama ({presion_cama:.1f}) y descarga ({vel_descarga:.0f})"
+    autor: "operaciones"
+
+  - id: cama_subiendo_sin_descarga
+    nombre: "Presión de cama sube y la descarga no responde"
+    espesador: "*"
+    condicion: "(pendiente(presion_cama, '1h') > 1.0) & (delta(vel_descarga, '1h') <= 0)"
+    duracion_min: 60
+    severidad: media
+    mensaje: "Cama sube {pendiente_presion_cama_1h:.2f}/h y descarga sin cambio ({vel_descarga:.0f})"
+    autor: "operaciones"
+
+  # --- Instrumentación --------------------------------------------------------
+  - id: nivel_piscina_congelado
+    nombre: "Transmisor de piscina congelado"
+    espesador: planta
+    condicion: "congelado(nivel_piscina, '120min')"
+    duracion_min: 120
+    severidad: baja
+    mensaje: "nivel_piscina sin cambio durante {duracion_min} min: revisar LIT_106/LIT_107"
+    autor: "calidad de instrumento"
+
+  - id: flujo_alim_congelado
+    nombre: "Flujómetro de alimentación congelado"
+    espesador: "*"
+    condicion: "congelado(flujo_alim, '90min') & (molienda_total > 100)"
+    duracion_min: 90
+    severidad: baja
+    mensaje: "flujo_alim sin cambio {duracion_min} min con planta produciendo"
+    autor: "calidad de instrumento"

@@ -147,3 +147,23 @@ EXTRACCION["af_sdk_path"] = _extraccion_local.get("af_sdk_path")
 EXTRACCION["rutas"] = dict(_extraccion_conf["rutas"])
 EXTRACCION["rutas"]["salida"] = str(RAIZ / _extraccion_conf["rutas"]["salida"])
 EXTRACCION["rutas"]["chunks"] = str(RAIZ / _extraccion_conf["rutas"]["chunks"])
+
+# ==============================================================================
+# AGENTE OFFLINE (src/espesadores/agente/)
+# ==============================================================================
+def _fusionar(base, encima):
+    """Superpone dict `encima` sobre `base` de forma recursiva (conf/local)."""
+    out = dict(base)
+    for k, v in (encima or {}).items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = _fusionar(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+
+AGENTE = _fusionar(_cargar_yaml("agente.yaml"), _cargar_yaml_local("agente.local.yaml"))
+AGENTE["datos"]["cache"] = str(RAIZ / AGENTE["datos"]["cache"])
+AGENTE["vigilancia"]["salidas"] = str(RAIZ / AGENTE["vigilancia"]["salidas"])
+AGENTE["reglas_operadores"] = str(RAIZ / AGENTE["reglas_operadores"])
+AGENTE["reglas_pendientes"] = str(RAIZ / AGENTE["reglas_pendientes"])
