@@ -37,6 +37,11 @@ onepager-recuperacion = "PYTHONPATH=src python -m espesadores.reportes.onepager_
 # Agente offline (reglas de operadores + estadística + LLM local por Ollama):
 #   pixi run agente estado | informe | vigilar | preguntar "..." | reglas listar
 agente = "PYTHONPATH=src python -m espesadores.agente.cli"
+# Adquisicion de otras fuentes (paquete src/acquisition, autocontenido):
+#   intensidades del courier de cobre desde PI, o tags arbitrarios con --tags
+adquirir-pi = "PYTHONPATH=src python -m acquisition.from_pi"
+#   lo mismo desde la BD Postgres works4cdp_assay (requiere sqlalchemy)
+adquirir-db = "PYTHONPATH=src python -m acquisition.from_db"
 # Solo disponible en la máquina Windows (entorno `extraccion`, ver abajo):
 #   pixi run -e extraccion extraer
 extraer = "PYTHONPATH=src python scripts/extraer.py"

@@ -115,3 +115,44 @@ def test_herramientas_esquemas_y_despacho_de_error():
     assert "error" in res
     res = H.invocar("listar_variables", {"espesador": "E2"})
     assert '"TH-002"' in res
+
+
+# ---------------------------------------------------------------------------
+# Paquete `acquisition` (traído de data2TesisV2): debe ser autocontenido, es
+# decir, importable sin ese proyecto en el PYTHONPATH y sin tocar `espesadores`.
+# ---------------------------------------------------------------------------
+def test_acquisition_es_autocontenido():
+    import ast
+    from pathlib import Path
+
+    carpeta = Path(__file__).resolve().parents[1] / "src" / "acquisition"
+    externos = []
+    for archivo in sorted(carpeta.glob("*.py")):
+        arbol = ast.parse(archivo.read_text(encoding="utf-8"))
+        for nodo in ast.walk(arbol):
+            modulos = []
+            if isinstance(nodo, ast.Import):
+                modulos = [a.name for a in nodo.names]
+            elif isinstance(nodo, ast.ImportFrom) and not nodo.level:
+                modulos = [nodo.module or ""]
+            for m in modulos:
+                raiz = m.split(".")[0]
+                if raiz in ("src", "espesadores", "data2TesisV2", "data2Tesis"):
+                    externos.append(f"{archivo.name}: {m}")
+    assert not externos, (
+        "acquisition no debe importar de otro proyecto ni del paquete espesadores "
+        "(debe poder ejecutarse con PYTHONPATH=src python -m acquisition.<modulo>):\n"
+        + "\n".join(externos))
+
+
+def test_acquisition_from_pi_importa_y_tiene_los_tags_del_courier():
+    from acquisition import from_pi
+    assert set(from_pi.TAGS_COURIER.values()) == {"n1fe", "n2cu", "n3zn", "n4mo", "n6sc"}
+    assert from_pi.FECHA_INICIO_COURIER.startswith("2025-07-13")
+    # DATA_RAW apunta a la carpeta de datos crudos de ESTE repo, no a data/raw
+    assert from_pi.DATA_RAW.name == "00_raw"
+
+
+def test_agente_y_acquisition_comparten_un_solo_pi_client():
+    from espesadores.agente.datos import _importar_pi_client
+    assert _importar_pi_client().__module__ == "acquisition.pi_client"

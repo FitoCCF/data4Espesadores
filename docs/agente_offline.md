@@ -57,6 +57,12 @@ Fechas: `'2026-03-01'`, `'2026-03-01 08:00'`, `ahora`, `hoy 08:00`, `ayer 06:30`
 Cota dura: `max_dias_por_consulta: 31` (agente.yaml). Un día × 68 tags tarda
 ~2 s por la pasarela.
 
+El cliente de la pasarela es `src/acquisition/pi_client.py` (copia única del
+repo, compartida con el paquete de adquisición; ver `docs/adquisicion.md`).
+Desde 2026-10 la pasarela exige token: exportar `PI_TOKEN` o poner
+`datos.pi_token` en `conf/local/agente.local.yaml` (nunca en el repo).
+`pixi run agente estado` indica si el fallo es por token.
+
 ## Reglas de operadores
 
 Se escriben en `conf/base/reglas_operadores.yaml` con **nombres de rol**,

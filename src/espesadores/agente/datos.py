@@ -186,16 +186,23 @@ class _Cache:
 # Fuente 3: pasarela PiGateway
 # ============================================================================
 def _importar_pi_client():
-    carpeta = os.environ.get("PI_CLIENT_DIR") or _CFG["pi_client_dir"]
-    carpeta = os.path.expanduser(carpeta)
+    """PiGateway desde el propio repo (src/acquisition/pi_client.py, copia
+    única). Si no estuviera, cae a la carpeta externa configurada en
+    `datos.pi_client_dir` para no romper instalaciones anteriores."""
+    try:
+        from acquisition.pi_client import PiGateway  # noqa: E402
+        return PiGateway
+    except ImportError:
+        pass
+    carpeta = os.path.expanduser(os.environ.get("PI_CLIENT_DIR") or _CFG["pi_client_dir"])
     if carpeta not in sys.path:
         sys.path.insert(0, carpeta)
     try:
         from pi_client import PiGateway  # noqa: E402
     except ImportError as e:
         raise RuntimeError(
-            f"No se encontró pi_client.py en {carpeta}. Ajustar datos.pi_client_dir "
-            "en conf/base/agente.yaml o la variable PI_CLIENT_DIR.") from e
+            "No se encontró pi_client: debería estar en src/acquisition/pi_client.py "
+            f"(este repo) o en {carpeta} (datos.pi_client_dir / PI_CLIENT_DIR).") from e
     return PiGateway
 
 
@@ -203,18 +210,24 @@ class _Pasarela:
     def __init__(self):
         self._pi = None
         self._attr = None
+        self.ultimo_error = None
 
     @property
     def pi(self):
         if self._pi is None:
             PiGateway = _importar_pi_client()
-            self._pi = PiGateway(zona_local=TZ, verbose=False)
+            # El token (si la pasarela lo exige) sale de PI_TOKEN o de
+            # conf/local/agente.local.yaml::datos.pi_token; nunca del repo.
+            token = os.environ.get("PI_TOKEN") or _CFG.get("pi_token")
+            kw = {"token": token} if token else {}
+            self._pi = PiGateway(zona_local=TZ, verbose=False, **kw)
         return self._pi
 
     def disponible(self):
         try:
             return bool(self.pi.health().get("ok"))
-        except Exception:
+        except Exception as e:  # noqa: BLE001 — el motivo ayuda a diagnosticar
+            self.ultimo_error = f"{type(e).__name__}: {e}"
             return False
 
     def atributos(self, tags):
@@ -313,9 +326,15 @@ class FuenteDatos:
         return pd.Timestamp.now(tz=TZ).floor("min")
 
     def cobertura(self):
-        return {"parquet_desde": str(self.parquet.t_min), "parquet_hasta": str(self.parquet.t_max),
-                "parquet_filas": getattr(self.parquet, "filas", 0),
-                "pasarela": self.pasarela.disponible()}
+        ok = self.pasarela.disponible()
+        out = {"parquet_desde": str(self.parquet.t_min), "parquet_hasta": str(self.parquet.t_max),
+               "parquet_filas": getattr(self.parquet, "filas", 0), "pasarela": ok}
+        if not ok and self.pasarela.ultimo_error:
+            out["pasarela_error"] = self.pasarela.ultimo_error
+            if "Token" in out["pasarela_error"] or "401" in out["pasarela_error"]:
+                out["pasarela_ayuda"] = ("La pasarela exige token: exportar PI_TOKEN=... "
+                                         "o poner datos.pi_token en conf/local/agente.local.yaml")
+        return out
 
     # -------------------------------------------------------------- lectura
     def ventana(self, inicio, fin, espesador=None, columnas=None):

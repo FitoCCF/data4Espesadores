@@ -526,6 +526,35 @@ Bug corregido de paso: `onepager_consolidado._f(v, nd=0)` recortaba ceros
 enteros ("410" → "41"); ahora solo recorta decimales. Afectaba a cualquier
 cifra entera terminada en 0 en los one-pagers anteriores.
 
+### 11.9 Paquete `src/acquisition` traído de data2TesisV2 (2026-10-02)
+Pedido del usuario: esos scripts deben poder usarse desde `data4Espesadores`
+sin llamar a data2TesisV2. Eran una copia byte a byte que no importaba
+(`from ..database`, `from ..pipeline.config`: módulos que aquí no existen).
+Qué se hizo:
+- `config.py` local (`DATA_RAW = data/00_raw`) y `database.py` portando
+  `DBManager`/`Extractor` de aquel repo, con import perezoso de sqlalchemy
+  para que la ruta de PI no dependa de la BD.
+- `__init__.py` con `__getattr__` perezoso: `import acquisition` ya no exige
+  sqlalchemy ni Windows.
+- **Un solo `pi_client.py` en el repo**: había dos versiones distintas en la
+  máquina (la vieja que traía `acquisition` y la de `data4cdpv1_local`, con
+  la API cruda `*_raw`). Se dejó la nueva en `src/acquisition/pi_client.py` y
+  `agente/datos.py` la usa desde ahí; `datos.pi_client_dir` queda de
+  respaldo. El repo deja de depender de `~/data4cdpv1_local`.
+- Tareas `pixi run adquirir-pi` / `adquirir-db`, `docs/adquisicion.md` y tres
+  pruebas que fijan el invariante (sin imports de otro proyecto ni de
+  `espesadores`, tags del courier presentes, un solo pi_client).
+
+Hallazgo de paso: **la pasarela ahora exige token** (`X-PI-Token`); sin él
+devuelve 401 y hoy el agente no puede consultar PI. Se agregó soporte de
+`PI_TOKEN` / `datos.pi_token` (conf/local, fuera de git) y `agente estado`
+dice explícitamente que el problema es el token.
+
+Decisión: los tags del courier (`_296290_ConcFinal_Canal*_ABB`) se quedan en
+`from_pi.py` y NO entran a `tags.yaml`, que sigue siendo la fuente única de
+los tags de espesadores. Si alguna vez se cruzan leyes de concentrado con la
+recuperación de agua, ahí sí habría que declararlos.
+
 ---
 
 ## 10. Pendientes y decisiones abiertas

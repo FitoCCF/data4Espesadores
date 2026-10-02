@@ -30,10 +30,15 @@ llm:
   pensar: true
 
 datos:
-  # Cliente HTTP de la pasarela PiGateway (fuera del repo, herramienta del
-  # usuario). Se importa desde aquí; se puede sobreescribir con la variable
-  # de entorno PI_CLIENT_DIR.
+  # El cliente de la pasarela PiGateway vive en el repo
+  # (src/acquisition/pi_client.py) y es el que se usa. Esta ruta es solo el
+  # respaldo si ese archivo no estuviera; se puede sobreescribir con la
+  # variable de entorno PI_CLIENT_DIR.
   pi_client_dir: "~/data4cdpv1_local/scripts"
+  # Token que exige la pasarela (cabecera X-PI-Token). NO se pone aquí: va en
+  # la variable de entorno PI_TOKEN o en conf/local/agente.local.yaml
+  # (ignorado por git). Vacío = la pasarela no pide token.
+  pi_token: ""
   # Ventanas bajadas de PI se guardan aquí por día para no volver a pedirlas.
   cache: "data/03_cache_agente"
   grilla: "1min"
