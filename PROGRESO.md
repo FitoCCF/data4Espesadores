@@ -321,6 +321,213 @@ pixi run test
 
 ---
 
+## 11. Agente offline (sesión 2026-09-17, tarde)
+
+**Encargo:** un agente que analice comportamientos según los datos, lea PI
+OSIsoft por la pasarela y corra en WSL2 **sin salir a internet**; con LLM
+local, reglas + estadística, y **reglas definibles por operadores**.
+
+### 11.1 Decisiones de diseño
+- **Tres capas, de la más confiable a la más flexible**: reglas de
+  operadores → estadística determinística → LLM local. Las alertas salen
+  de las dos primeras; el LLM solo orquesta herramientas y redacta.
+  Razón: un modelo de 14B se equivoca; no puede ser quien decida qué es
+  una alerta ni tocar el dato crudo.
+- **Variables por rol, no por tag** (`flujo_alim`, `valvula_alim`,
+  `nivel_piscina`, `vel_descarga`…): las reglas y el LLM hablan el idioma
+  de operaciones y `tags.yaml` sigue siendo la única fuente de tags.
+  Los roles derivados replican las reglas ya existentes (E04 para el tren
+  en servicio, `piscinas.derivar_nivel` para la piscina).
+- **Fuente de datos en cascada**: parquet canónico → caché por día
+  (`data/03_cache_agente/`) → pasarela `recorded` con reconstrucción a
+  grilla idéntica a la de `pi_tool.py` (ZOH para `step`, NaN sobre
+  1.5×compmax). Cota `max_dias_por_consulta: 31` para no repetir el OOM.
+  Medido: 1 día × 68 tags ≈ 2 s.
+- **Reglas declarativas en YAML** (`conf/base/reglas_operadores.yaml`)
+  con funciones `media/mediana/delta/pendiente/congelado/hora_entre`;
+  `duracion_min` obliga a que la condición sea continua (evita alertas
+  por un minuto de ruido). Evaluación con `eval` sobre espacio cerrado y
+  lista negra (`__`, `import`, …); validación contra un DataFrame
+  sintético antes de aceptar cualquier regla.
+- **Flujo de aprobación**: el LLM o un operador **proponen**
+  (`reglas_pendientes.yaml`); solo `agente reglas aprobar` la pasa a
+  vigente. Nunca entra en vigor una regla sin humano.
+- **LLM por Ollama** (HTTP local, sin dependencia nueva salvo `requests`,
+  que ya estaba en el lock). Modelo por defecto `qwen3:14b` (entra en los
+  16 GB de la Quadro RTX 5000). Instalación en `~/.local` sin sudo.
+
+### 11.2 Lo construido
+`src/espesadores/agente/{datos,reglas,estadistica,herramientas,llm,cli}.py`,
+`conf/base/agente.yaml`, `conf/base/reglas_operadores.yaml` (8 reglas
+iniciales: R1/R2 de piscina, caída rápida, válvula abierta con flujo bajo
+—hipótesis 2—, torque alto, cama sube sin respuesta de descarga, dos de
+instrumento congelado), tarea `pixi run agente`, `tests/test_agente.py`
+(9 pruebas, sin PI ni LLM), `docs/agente_offline.md`.
+
+### 11.3 Errores cometidos y corregidos
+- `pyarrow.read_table(columns=[...])` sin `timestamp` devuelve RangeIndex:
+  hay que pedir la columna del índice explícitamente.
+- `detectar_episodios` devuelve DataFrame, no lista: iterar con `iterrows`.
+- Contar "congelado" por diffs nulos da N−1 minutos para N valores iguales;
+  se corrigió a N y el inicio un minuto antes.
+- El detector de escalones sin piso de relevancia daba 148 cambios en 3
+  días (la MAD de una señal suave es diminuta): se exige además ≥ 15 % del
+  rango p10–p90, igual que el piso de E10.
+- La válvula (consigna del operador) no se reporta como "congelada": es
+  escalón por diseño (`ROLES_ESCALON`).
+- Descarga de Ollama: el enlace `ollama-linux-amd64.tgz` de la web ya no
+  existe (404); el asset actual es `.tar.zst`.
+
+### 11.4 Verificado
+- `agente informe --inicio=-12h --guardar` contra PI en vivo: hallazgos,
+  resúmenes por espesador, congelados, escalones, episodios; informe en
+  `data/06_reporting/agente/`.
+- Sobre historia (2026-03-01→08): reglas disparan episodios plausibles
+  (piscina 74.5 % 68 min el 03-05; válvula 39 % con flujo 760–1173 en
+  TH-001; cama subiendo sin respuesta en TH-001/TH-003).
+- `pixi run test`: 17/17 (los 8 previos + 9 del agente; las dos líneas de
+  ZOH del agente se agregaron al allowlist de `test_sin_ffill_bfill` con
+  justificación: es reconstrucción de archivo con guarda compmax, no
+  relleno de huecos de sensor).
+
+### 11.5 LLM local — operativo desde 2026-09-18
+`qwen3:14b` descargado (9,3 GB) en la red rápida y probado contra PI en vivo.
+Ajustes que hicieron falta al probar con el modelo real (todos en
+`agente/llm.py`, `herramientas.py`, `estadistica.py`):
+- **El modelo no sabe qué día es**: para "ayer" inventó 2024-04-04. Ahora
+  el prompt de sistema lleva fecha/hora actual y el parser acepta
+  `ayer 06:30`, `hoy 08:00`, `-1d 18:30`.
+- Confundía `flujo_piscinas` con `flujo_alim` y "comparaba" repitiendo la
+  misma cifra → glosario de variables en el prompt + regla "comparar =
+  `comparar_periodos`" + modo *pensar* de Qwen3 activado (`llm.pensar:
+  true`): pasó a elegir bien la herramienta (15 → 40 s por pregunta).
+- Cruzaba el signo de la diferencia con etiquetas "A/B" → la herramienta
+  devuelve `lectura` ya redactada con las fechas reales ("periodo[16→17]
+  mayor que …") y `unidad` por variable (inventaba "t/h" para un flujo).
+- El resumen de turno salía en inglés, largo y especulando causas
+  ("equipment failure") → instrucción estricta en español (≤ 12 líneas,
+  sin causas, congelados de bombas ≠ anomalía), recibe el texto legible del
+  informe en vez del JSON, y sin modo pensar (16 s).
+Verificado: pregunta simple 9 s; comparación entre días correcta (1 480 vs
+1 429 m³/h, +3,6 %); propuesta de regla desde lenguaje natural válida y en
+`reglas_pendientes.yaml`; resumen de turno correcto.
+
+Historial de la instalación (por si hay que repetirla):
+- Ollama 0.34.1 instalado en espacio de usuario: `~/.local/bin/ollama`
+  (tarball `ollama-linux-amd64.tar.zst` de GitHub releases; el `.tgz` que
+  anuncia ollama.com da 404). No arranca solo: hay que lanzar `serve`.
+- `conf/base/agente.yaml::llm` apunta a `http://127.0.0.1:11434`, modelo
+  `qwen3:14b` (9.28 GB, Q4_K_M; verificado en el registro). Cabe entero en
+  los 16 GB de la Quadro RTX 5000.
+- `agente/llm.py` (cliente HTTP + loop de tool calling) y los modos
+  `preguntar`/`chat`/redacción del informe están escritos pero **no
+  probados contra un modelo real**.
+
+El primer `ollama pull` falló en la red rápida con `connection reset by
+peer` desde `*.r2.cloudflarestorage.com`; al reintentar al día siguiente
+bajó completo. Los WARN `failed to hydrate cloud model show cache` al
+arrancar `serve` son inofensivos (`OLLAMA_NO_CLOUD=true` los quita).
+
+Para retomar (una sola vez con red):
+```bash
+~/.local/bin/ollama serve &            # o: nohup ... > ~/.local/ollama.log 2>&1 &
+~/.local/bin/ollama pull qwen3:14b     # reanuda si se corta
+~/.local/bin/ollama list
+pixi run agente estado                 # debe decir "modelo qwen3:14b cargado"
+pixi run agente preguntar "¿cómo estuvo la piscina en las últimas 12 horas?"
+```
+Alternativas si el pull sigue bloqueado: proxy (`HTTPS_PROXY=... ollama serve`),
+o bajar `Qwen3-14B-Q4_K_M.gguf` de Hugging Face por otra vía y cargarlo con
+`ollama create qwen3:14b -f Modelfile` (`FROM /ruta/al.gguf`) — vía 100 % offline.
+
+Límite conocido del 14B: en preguntas largas con dos sub-preguntas a veces
+resuelve solo una o mezcla variables; conviene preguntar de a una. Si se
+repite, probar `qwen3:30b-a3b` (18,6 GB, parte en CPU) cambiando solo
+`agente.yaml`.
+
+### 11.6 Parámetros por espesador y tren con FIT_114 subiendo (pedido 2026-09-17)
+`src/espesadores/dominio/flujo_piscinas_parametros.py` (`pixi run flujo-piscinas`),
+salida `data/06_reporting/flujo_piscinas/parametros_por_tren.{md,csv}`.
+Método: FIT_114 suavizado (mediana 30 min), estado por cambio en 60 min
+(±2 % de su mediana = ±38): subiendo / estable / bajando; planta
+produciendo (suma de molinos > 100); exactamente un tren de descarga en
+servicio (nunca hubo ambos a la vez con planta produciendo). Por variable
+min · p10 · p50 · p90 · max; celdas fuera de rango físico anuladas antes
+(los "máximos" 99 999 / 88 431 del primer intento eran centinelas del DCS).
+
+Resultado: con FIT_114 subiendo casi ningún parámetro del espesador cambia
+frente a estable/bajando (Δ mediana < 1 %), salvo: descarga 1–2 puntos
+más baja en TH-001 (33 vs 35) y TH-002 T1 (22.4 vs 24); cizalle más bajo
+en TH-002 T1 (50 vs 54.5) y TH-003 (60 vs 65 T1, 47 vs 50 T2); y la
+**piscina 2–4 pp más baja** (87–88 vs 90–91) — FIT_114 sube cuando la
+piscina está baja, consistente con que responde a los tanques TK001/TK002
+y no a lo que hace el espesador. Entre trenes, el contraste grande no es
+por FIT_114 sino estructural: TH-001 descarga a 32–33 con cizalle 65,
+TH-002/TH-003 a 20–24 con cizalle 40–60; TH-002 T2 y TH-003 T2 sacan el
+%sólidos más alto (62.7).
+
+One-pager "explicado simple" del mismo análisis:
+`reportes/onepager_flujo_piscinas.py` (`pixi run onepager-flujo-piscinas`) →
+`data/06_reporting/flujo_piscinas/onepager_flujo_piscinas.html`, artefacto
+https://claude.ai/artifact/FAttd2oVEemVmH1eNCMrxZ. 17 gráficos de rango
+(seis filas espesador·tren: barra p10–p90 subiendo, raya = mediana, marcador
+hueco = mediana bajando, T1 liso / T2 rayado, ámbar/azul = mediana más
+alta/baja) + 5 de planta (sube/igual/baja) + tabla + conclusiones
+**calculadas** desde el CSV. Render verificado con Chrome de Windows en
+modo headless desde WSL (`/mnt/c/Program Files/Google/Chrome/Application/
+chrome.exe --headless=new --screenshot`), que resuelve el pendiente 6 de
+§10 para futuros one-pagers.
+
+### 11.7 Lo mismo en función de los tanques temporales LIT_108/LIT_109
+Mismo módulo con `--senal tanques` (`pixi run tanques`, `pixi run
+onepager-tanques`): señal = promedio LIT_108/LIT_109 (corr. 0,85), umbral
+**±1 pp en 60 min** (los tanques viven en ~35 % y suben a 70–100 % por
+episodios; un umbral relativo a la mediana sería ruido). Reparto: sube
+25,5 %, quieto 47,7 %, baja 26,8 %. Salidas en `data/06_reporting/tanques/`,
+artefacto https://claude.ai/artifact/FwiKxwmCXkWfdVcQ88hPfh.
+
+Resultado (más marcado que con FIT_114): con los tanques subiendo la
+**bomba de descarga va 5–19 % más lenta** en los seis trenes (TH-003 T1 22
+vs 27; TH-001 31 vs 35; TH-002 T1 22 vs 25) y la **de cizalle 15–18 % más
+lenta** en TH-002 y TH-003 (45 vs 55, 34 vs 41, 55 vs 65, 45 vs 55);
+válvula de TH-003 3–5 puntos más abierta. Flujo, cama, torque, cajón,
+dilución, % sólidos y densidad no cambian (< 3 %). En planta: cuando los
+tanques se mueven (suben o bajan) la piscina está alta (91,6 %); cuando
+están quietos en su nivel bajo (~34 %) la piscina está más baja (82,4 %);
+FIT_114 no cambia (1 885 vs 1 886). Lectura: los tanques ciclan
+(llenado/bombeo) en los períodos de piscina llena, y en esos períodos la
+descarga de los espesadores está más lenta — coherente con la hipótesis 1
+(menos descarga → más rebose → más agua recuperada), pero es correlación.
+
+### 11.8 Con qué valores recupera más agua cada espesador (por tren)
+Pregunta del usuario: si FIT_114 y los tanques no discriminan, ¿cómo medir
+"más recuperación" y con qué parámetros? Respuesta: FIT_114/tanques son
+señales de PLANTA (tres espesadores + FIT_123/FIT_601 + bombas); la
+recuperación hay que medirla en cada espesador con el balance de agua de
+E05 (`recuperacion = rebose/agua_alim`, `wt_activo` medido, sol_alim 36 %
+fijo por H-E). `dominio/recuperacion_parametros.py` (`pixi run
+recuperacion`) replica E05 minuto a minuto, parte cada espesador en
+tercios de recuperación (cortes 64,4/66,5 · 64,5/68,2 · 63,6/68,5 %) y
+describe todos los parámetros por tren en cada tercio; `reportes/
+onepager_recuperacion.py` (`pixi run onepager-recuperacion`) lo muestra
+con la fórmula y el nombre de cada tag de tags.yaml + tabla de tags.
+Artefacto https://claude.ai/artifact/3DRogVYCWRMNvKZzbpYZyr.
+
+Resultado (ALTA vs BAJA): consistente en los seis trenes, **% sólidos de
+descarga 60,6–63,8 vs 57,9–58,8** (la palanca, por construcción de la
+métrica); acompañan presión de cama más alta (5 de 6), bomba de descarga
+algo más rápida (5 de 6) y densidad más alta. Válvula, torque, floculante,
+cizalle e interfaz cambian pero en direcciones distintas según el tren
+(regímenes). Advertencia incluida: en TH-001 T1 el tercio ALTA tiene la
+mitad del tonelaje (222 vs 410 t/h) — parte de la "mejor recuperación" es
+menos sólido entrando; en los otros cinco trenes el tonelaje es comparable.
+
+Bug corregido de paso: `onepager_consolidado._f(v, nd=0)` recortaba ceros
+enteros ("410" → "41"); ahora solo recorta decimales. Afectaba a cualquier
+cifra entera terminada en 0 en los one-pagers anteriores.
+
+---
+
 ## 10. Pendientes y decisiones abiertas
 
 1. **Extender el rango a 2022-12-30** (508 días más disponibles en PI).
@@ -331,6 +538,9 @@ pixi run test
    no hay ninguno en `tags.yaml`.
 5. Curva nivel–volumen de la piscina (§5.3 del traspaso) para cerrar el
    balance de agua y reconstruir el rebose del tramo sin dato.
-6. Revisar visualmente el consolidado y ajustar lo que se vea montado o
-   cortado (no se pudo capturar pantalla desde WSL).
+6. Revisar visualmente el consolidado (ya se puede: Chrome de Windows en
+   headless desde WSL, ver §11.6).
 7. Actualizar `README.md` con las cifras `recorded` y el consolidado.
+8. Agente: afinar umbrales de las 8 reglas iniciales con operaciones (son
+   puntos de partida); evaluar `qwen3:30b-a3b` vs `qwen3:14b` en calidad de
+   elección de herramientas; servicio de usuario (systemd) para `vigilar`.
